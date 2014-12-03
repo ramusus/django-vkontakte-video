@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='django-vkontakte-videos',
-    version=__import__('vkontakte_videos').__version__,
-    description='Django implementation for vkontakte API videos',
+    name='django-vkontakte-video',
+    version=__import__('vkontakte_video').__version__,
+    description='Django implementation for vkontakte API video',
     long_description=open('README.md').read(),
     author='ramusus',
     author_email='ramusus@gmail.com',
-    url='https://github.com/ramusus/django-vkontakte-videos',
-    download_url='http://pypi.python.org/pypi/django-vkontakte-videos',
+    url='https://github.com/ramusus/django-vkontakte-video',
+    download_url='http://pypi.python.org/pypi/django-vkontakte-video',
     license='BSD',
     packages=find_packages(),
     include_package_data=True,

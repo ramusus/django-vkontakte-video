@@ -1,14 +1,14 @@
-Django Vkontakte Videos
-=======================
+Django Vkontakte Video
+======================
 
-[![PyPI version](https://badge.fury.io/py/django-vkontakte-videos.png)](http://badge.fury.io/py/django-vkontakte-videos) [![Build Status](https://travis-ci.org/ramusus/django-vkontakte-videos.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-videos) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-videos/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-videos)
+[![PyPI version](https://badge.fury.io/py/django-vkontakte-video.png)](http://badge.fury.io/py/django-vkontakte-video) [![Build Status](https://travis-ci.org/ramusus/django-vkontakte-video.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-video) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-video/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-video)
 
 Приложение позволяет взаимодействовать с видео контентом Вконтакте используя стандартные модели Django через Вконтакте API
 
 Установка
 ---------
 
-    pip install django-vkontakte-videos
+    pip install django-vkontakte-video
 
 В `settings.py` необходимо добавить:
 
@@ -20,14 +20,14 @@ Django Vkontakte Videos
         'vkontakte_places,
         'vkontakte_groups',
         'vkontakte_users',
-        'vkontakte_videos',
+        'vkontakte_video',
     )
 
     # oauth-tokens settings
     OAUTH_TOKENS_HISTORY = True                                         # to keep in DB expired access tokens
     OAUTH_TOKENS_VKONTAKTE_CLIENT_ID = ''                               # application ID
     OAUTH_TOKENS_VKONTAKTE_CLIENT_SECRET = ''                           # application secret key
-    OAUTH_TOKENS_VKONTAKTE_SCOPE = ['ads,wall,videos,friends,stats']    # application scopes
+    OAUTH_TOKENS_VKONTAKTE_SCOPE = ['ads,wall,video,friends,stats']    # application scopes
     OAUTH_TOKENS_VKONTAKTE_USERNAME = ''                                # user login
     OAUTH_TOKENS_VKONTAKTE_PASSWORD = ''                                # user password
     OAUTH_TOKENS_VKONTAKTE_PHONE_END = ''                               # last 4 digits of user mobile phone
