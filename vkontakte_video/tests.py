@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-from django.test import TestCase
-from models import Album, Photo, Comment
-from factories import AlbumFactory, PhotoFactory
-from vkontakte_users.factories import UserFactory, User
-from vkontakte_groups.factories import GroupFactory
 from datetime import datetime
-import simplejson as json
-import mock
+from django.test import TestCase
 
+from vkontakte_groups.factories import GroupFactory
+from vkontakte_users.factories import UserFactory, User
+
+from factories import AlbumFactory, PhotoFactory
+import mock
+from models import VideoAlbum, Video, Comment
+import simplejson as json
 GROUP_ID = 16297716
 ALBUM_ID = '-16297716_154228728'
 PHOTO_ID = '-16297716_280118215'
@@ -18,7 +19,7 @@ ALBUM_CRUD_ID = '-59154616_180124643'
 USER_AUTHOR_ID = 201164356
 
 
-class VkontaktePhotosTest(TestCase):
+class VkontakteVideoModelTest(TestCase):
 
     def setUp(self):
         self.objects_to_delete = []
@@ -31,14 +32,15 @@ class VkontaktePhotosTest(TestCase):
 
         group = GroupFactory(remote_id=GROUP_ID)
 
-        self.assertEqual(Album.objects.count(), 0)
+        self.assertEqual(VideoAlbum.objects.count(), 0)
 
-        albums = group.fetch_albums()
+        albums = VideoAlbum.remote.fetch(group=group)
 
         self.assertTrue(len(albums) > 0)
-        self.assertEqual(Album.objects.count(), len(albums))
+        self.assertEqual(VideoAlbum.objects.count(), len(albums))
         self.assertEqual(albums[0].group, group)
 
+        '''
         # check force ordering
         self.assertListEqual(list(albums), list(Album.objects.order_by('-updated')))
 
@@ -61,23 +63,25 @@ class VkontaktePhotosTest(TestCase):
         albums = group.fetch_albums(before=before, after=after)
         self.assertEqual(len(albums), Album.objects.count())
         self.assertEqual(len(albums), 5)
+        '''
 
     def test_fetch_group_photos(self):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
 
-        self.assertEqual(Photo.objects.count(), 0)
+        self.assertEqual(Video.objects.count(), 0)
 
-        photos = album.fetch_photos(extended=True)
+        videos = album.fetch_videos()  # extended=True
 
         self.assertTrue(len(photos) > 0)
-        self.assertEqual(Photo.objects.count(), len(photos))
-        self.assertEqual(photos[0].group, group)
-        self.assertEqual(photos[0].album, album)
-        self.assertTrue(photos[0].likes_count > 0)
-        self.assertTrue(photos[0].comments_count > 0)
+        self.assertEqual(Video.objects.count(), len(videos))
+        self.assertEqual(videos[0].group, group)
+        self.assertEqual(videos[0].album, album)
+        self.assertTrue(videos[0].likes_count > 0)
+        self.assertTrue(videos[0].comments_count > 0)
 
+        '''
         # testing `after` parameter
         after = Photo.objects.order_by('-created')[4].created.replace(tzinfo=None)
 
@@ -97,9 +101,10 @@ class VkontaktePhotosTest(TestCase):
         photos = album.fetch_photos(before=before, after=after)
         self.assertEqual(len(photos), Photo.objects.count())
         self.assertEqual(len(photos), 1)
+        '''
 
     @mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
-    def test_fetch_photo_comments(self, *kwargs):
+    def test_video_fetch_comments(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
@@ -284,7 +289,8 @@ class VkontaktePhotosTest(TestCase):
         assert_local_equal_to_remote(comment)
 
         # create by manager
-        comment = Comment.objects.create(text='Test comment created by manager', photo=photo, author=group, date=datetime.now(), commit_remote=True)
+        comment = Comment.objects.create(
+            text='Test comment created by manager', photo=photo, author=group, date=datetime.now(), commit_remote=True)
         self.objects_to_delete += [comment]
         self.assertEqual(Comment.objects.count(), 2)
 
@@ -305,7 +311,8 @@ class VkontaktePhotosTest(TestCase):
 
         self.assertEqual(Comment.objects.count(), 2)
         self.assertTrue(comment.archived)
-        self.assertEqual(Comment.remote.fetch_photo(photo=comment.photo).filter(remote_id=comment.remote_id).count(), 0)
+        self.assertEqual(Comment.remote.fetch_photo(
+            photo=comment.photo).filter(remote_id=comment.remote_id).count(), 0)
 
         # restore
         comment.restore(commit_remote=True)

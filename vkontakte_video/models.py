@@ -14,7 +14,6 @@ from vkontakte_api.models import VkontakteManager, VkontakteTimelineManager, Vko
 from vkontakte_api.utils import api_call
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
-
 #import signals
 log = logging.getLogger('vkontakte_video')
 
@@ -29,7 +28,7 @@ ALBUM_PRIVACY_CHOCIES = (
 class VideoRemoteManager(VkontakteTimelineManager):
 
     @transaction.commit_on_success
-    def fetch(self, owner_id=None, group=None, **kwargs):
+    def fetch(self, video_album=None, owner_id=None, group=None, **kwargs):
 
         if owner_id:
             #kwargs.update({'owner_id': owner_id})
@@ -41,7 +40,19 @@ class VideoRemoteManager(VkontakteTimelineManager):
         if group:
             kwargs.update({'gid': group.remote_id})
 
-        #kwargs["v"] = '5.27'
+        print "__Video.fetch"
+        print "album: ", video_album.remote_id
+
+        if video_album:
+            kwargs.update({'album_id': video_album.remote_id})
+            owner_id = '-%' % video_album.owner.remote_id  # 16297716 -> -16297716
+            kwargs.update({'owner_id': owner_id})
+
+        if ids:
+            kwargs.update({'videos': ','.join(map(str, ids))})
+
+        kwargs["v"] = '5.27'
+        kwargs['extended'] = 1
         return super(VideoRemoteManager, self).fetch(**kwargs)
 
 
@@ -53,7 +64,7 @@ class VideoAlbumRemoteManager(VkontakteManager):
         return instance.updated or instance.created or timezone.now()
 
     @transaction.commit_on_success
-    def fetch(self, user=None, group=None, ids=None, need_covers=False, before=None, after=None, **kwargs):
+    def fetch(self, user=None, group=None, ids=None, before=None, after=None, **kwargs):
         if not user and not group:
             raise ValueError("You must specify user of group, which albums you want to fetch")
         if ids and not isinstance(ids, (tuple, list)):
@@ -63,11 +74,8 @@ class VideoAlbumRemoteManager(VkontakteManager):
         if before and before < after:
             raise ValueError("Attribute `before` should be later, than attribute `after`")
 
-        kwargs = {
-            # need_covers
-            # 1 - будет возвращено дополнительное поле thumb_src. По умолчанию поле thumb_src не возвращается.
-            'need_covers': int(need_covers)
-        }
+        kwargs = {}
+
         # uid
         # ID пользователя, которому принадлежат альбомы. По умолчанию – ID текущего пользователя.
         if user:
@@ -76,15 +84,16 @@ class VideoAlbumRemoteManager(VkontakteManager):
         # ID группы, которой принадлежат альбомы.
         if group:
             kwargs.update({'gid': group.remote_id})
-        # aids
+        # vids
         # перечисленные через запятую ID альбомов.
         if ids:
-            kwargs.update({'aids': ','.join(map(str, ids))})
+            kwargs.update({'vids': ','.join(map(str, ids))})
 
         # special parameters
         kwargs['after'] = after
         kwargs['before'] = before
 
+        kwargs["v"] = '5.27'
         kwargs['extended'] = 1
 
         return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
@@ -149,7 +158,7 @@ class CommentRemoteManager(VkontakteTimelineManager):
 
     @transaction.commit_on_success
     @fetch_all(default_count=100)
-    def fetch_photo(self, photo, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
+    def fetch_by_video(self, video, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
         if count > 100:
             raise ValueError("Attribute 'count' can not be more than 100")
         if sort not in ['asc', 'desc']:
@@ -164,14 +173,14 @@ class CommentRemoteManager(VkontakteTimelineManager):
         # owner_id идентификатор пользователя или сообщества, которому принадлежит фотография.
         # Обратите внимание, идентификатор сообщества в параметре owner_id необходимо указывать со знаком "-" — например, owner_id=-1 соответствует идентификатору сообщества ВКонтакте API (club1)
         # int (числовое значение), по умолчанию идентификатор текущего пользователя
-        if photo.owner:
-            kwargs['owner_id'] = photo.owner.remote_id
-        elif photo.group:
-            kwargs['owner_id'] = -1 * photo.group.remote_id
+        if video.owner:
+            kwargs['owner_id'] = video.owner.remote_id
+        elif video.group:
+            kwargs['owner_id'] = -1 * video.group.remote_id
 
-        # photo_id идентификатор фотографии.
+        # video_id идентификатор видеозаписи.
         # int (числовое значение), обязательный параметр
-        kwargs['photo_id'] = photo.remote_id.split('_')[1]
+        kwargs['video_id'] = video.remote_id
 
         # need_likes 1 — будет возвращено дополнительное поле likes. По умолчанию поле likes не возвращается.
         # флаг, может принимать значения 1 или 0
@@ -193,7 +202,8 @@ class CommentRemoteManager(VkontakteTimelineManager):
         kwargs['after'] = after
         kwargs['before'] = before
 
-        kwargs['extra_fields'] = {'photo_id': photo.id}
+        kwargs['extra_fields'] = {'video_id': video.pk}
+        kwargs["v"] = '5.27'
 #        try:
         return super(CommentRemoteManager, self).fetch(**kwargs)
 #         except VkontakteError, e:
@@ -256,7 +266,7 @@ class VideoAbstractModel(VkontakteModel):
 @python_2_unicode_compatible
 class VideoAlbum(VideoAbstractModel):
 
-    remote_pk_field = 'album_id'
+    #remote_pk_field = 'album_id'
     #slug_prefix = 'album'
 
     # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
@@ -302,7 +312,7 @@ class VideoAlbum(VideoAbstractModel):
 
 class Video(VideoAbstractModel):
     #methods_namespace = 'video'
-    remote_pk_field = 'vid'
+    #remote_pk_field = 'vid'
 
     video_album = models.ForeignKey(VideoAlbum, null=True, related_name='videos')
 
@@ -331,6 +341,9 @@ class Video(VideoAbstractModel):
         self.comments_count = response['comments']
         self.views_count = response['views']
 
+    @transaction.commit_on_success
+    def fetch_comments(self, *args, **kwargs):
+        return Comment.remote.fetch_by_video(video=self, *args, **kwargs)
 
 """
 class Photo(PhotosAbstractModel):
@@ -455,7 +468,7 @@ class Photo(PhotosAbstractModel):
 
 class Comment(VkontakteModel, VkontakteCRUDModel):
 
-    methods_namespace = 'photos'
+    methods_namespace = 'video'
     remote_pk_field = 'cid'
     fields_required_for_update = ['comment_id', 'owner_id']
     _commit_remote = False
@@ -503,7 +516,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
             from_group = True
         kwargs.update({
             'owner_id': self.remote_owner_id,
-            'photo_id': self.photo.remote_id_short,
+            'video_id': self.photo.remote_id_short,
             'message': self.text,
 #            'reply_to_comment': self.reply_for.id if self.reply_for else '',
             'from_group': int(from_group),
@@ -542,6 +555,8 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
         return Model.objects.get_or_create(remote_id=abs(remote_id))
 
     def parse(self, response):
+        print response
+
         # undocummented feature of API. if from_id == 101 -> comment by group
         if response['from_id'] == 101:
             self.author = self.photo.group

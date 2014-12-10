@@ -30,8 +30,8 @@ class VideoAlbumAdmin(VkontakteModelAdmin):
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
 
-    list_display = ('image_preview', 'title', 'videos_count')
-    list_display_links = ('title',)
+    list_display = ('image_preview', 'remote_id', 'title', 'videos_count')
+    list_display_links = ('title', 'remote_id',)
     search_fields = ('title', 'description')
     inlines = [VideoInline]
 
@@ -49,8 +49,8 @@ class VideoAdmin(VkontakteModelAdmin):
     text_with_link.allow_tags = True
     '''
 
-    list_display = ('image_preview', 'remote_id', 'comments_count', 'views_count', 'date')
-    list_display_links = ('remote_id',)
+    list_display = ('image_preview', 'remote_id', 'title', 'comments_count', 'views_count', 'date')
+    list_display_links = ('remote_id', 'title')
     list_filter = ('video_album',)
 
 admin.site.register(VideoAlbum, VideoAlbumAdmin)
