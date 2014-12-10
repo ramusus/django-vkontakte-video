@@ -30,7 +30,7 @@ class VideoAlbumAdmin(VkontakteModelAdmin):
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
 
-    list_display = ('image_preview', 'remote_id', 'title', 'videos_count')
+    list_display = ('image_preview', 'remote_id', 'title', 'owner', 'group', 'videos_count')
     list_display_links = ('title', 'remote_id',)
     search_fields = ('title', 'description')
     inlines = [VideoInline]
