@@ -17,7 +17,7 @@ Django Vkontakte Video
         'oauth_tokens',
         'taggit',
         'vkontakte_api',
-        'vkontakte_places,
+        'vkontakte_places',
         'vkontakte_groups',
         'vkontakte_users',
         'vkontakte_video',
