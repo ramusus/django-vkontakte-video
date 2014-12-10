@@ -41,6 +41,7 @@ class VideoRemoteManager(VkontakteTimelineManager):
         if group:
             kwargs.update({'gid': group.remote_id})
 
+        #kwargs["v"] = '5.27'
         return super(VideoRemoteManager, self).fetch(**kwargs)
 
 
@@ -235,6 +236,11 @@ class VideoAbstractModel(VkontakteModel):
     """
 
     def parse(self, response):
+        print response
+        #response = response['items']
+        # print response['owner_id']
+        # print owner_id.__class__
+
         # TODO: перейти на ContentType и избавиться от метода
         owner_id = int(response.pop('owner_id'))
         if owner_id > 0:
@@ -245,7 +251,6 @@ class VideoAbstractModel(VkontakteModel):
         super(VideoAbstractModel, self).parse(response)
 
         #self.remote_id = self.get_remote_id(self.remote_id)
-        print response
 
 
 @python_2_unicode_compatible
@@ -297,6 +302,7 @@ class VideoAlbum(VideoAbstractModel):
 
 class Video(VideoAbstractModel):
     #methods_namespace = 'video'
+    remote_pk_field = 'vid'
 
     video_album = models.ForeignKey(VideoAlbum, null=True, related_name='videos')
 
@@ -319,6 +325,11 @@ class Video(VideoAbstractModel):
     remote = VideoRemoteManager(remote_pk=('remote_id',), methods={
         'get': 'get',
     })
+
+    def parse(self, response):
+        super(Video, self).parse(response)
+        self.comments_count = response['comments']
+        self.views_count = response['views']
 
 
 """

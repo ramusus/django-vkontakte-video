@@ -44,13 +44,14 @@ class VideoAdmin(VkontakteModelAdmin):
     image_preview.allow_tags = True
     '''
     def text_with_link(self, obj):
-        return u'%s <a href="%s"><strong>ссылка</strong></a>' % (obj.text, (reverse('admin:vkontakte_photos_photo_change', args=(obj.id,))))
+        return u'%s <a href="%s"><strong>ссылка</strong></a>' % (obj.title, )
     text_with_link.short_description = u'Текст'
     text_with_link.allow_tags = True
     '''
 
-    list_display = ('image_preview', 'title', 'comments_count', 'views_count', 'date')
-    #list_filter = ('album',)
+    list_display = ('image_preview', 'remote_id', 'comments_count', 'views_count', 'date')
+    list_display_links = ('remote_id',)
+    list_filter = ('video_album',)
 
 admin.site.register(VideoAlbum, VideoAlbumAdmin)
 admin.site.register(Video, VideoAdmin)
