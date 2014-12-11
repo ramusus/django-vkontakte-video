@@ -40,8 +40,8 @@ class VideoRemoteManager(VkontakteTimelineManager):
         if group:
             kwargs.update({'gid': group.remote_id})
 
-        print "__Video.fetch"
-        print "album: ", video_album.remote_id
+        # print "__Video.fetch"
+        # print "album: ", video_album.remote_id
 
         if video_album:
             if video_album.group:
@@ -49,10 +49,11 @@ class VideoRemoteManager(VkontakteTimelineManager):
             else:
                 owner_id = video_album.owner.remote_id
 
-            kwargs.update({'owner_id': owner_id})
-            kwargs.update({'album_id': video_album.remote_id})
+            kwargs['owner_id'] = owner_id
+            kwargs['album_id'] = video_album.remote_id
+            kwargs['extra_fields'] = {'video_album_id': video_album.pk}
 
-        kwargs["v"] = '5.27'
+        kwargs['v'] = '5.27'
         kwargs['extended'] = 1
         return super(VideoRemoteManager, self).fetch(**kwargs)
 
@@ -65,11 +66,9 @@ class VideoAlbumRemoteManager(VkontakteManager):
         return instance.updated or instance.created or timezone.now()
 
     @transaction.commit_on_success
-    def fetch(self, user=None, group=None, ids=None, before=None, after=None, **kwargs):
+    def fetch(self, user=None, group=None, before=None, after=None, **kwargs):
         if not user and not group:
             raise ValueError("You must specify user of group, which albums you want to fetch")
-        if ids and not isinstance(ids, (tuple, list)):
-            raise ValueError("Attribute 'ids' should be tuple or list")
         if before and not after:
             raise ValueError("Attribute `before` should be specified with attribute `after`")
         if before and before < after:
@@ -85,10 +84,6 @@ class VideoAlbumRemoteManager(VkontakteManager):
         # ID группы, которой принадлежат альбомы.
         if group:
             kwargs.update({'gid': group.remote_id})
-        # vids
-        # перечисленные через запятую ID альбомов.
-        if ids:
-            kwargs.update({'vids': ','.join(map(str, ids))})
 
         # special parameters
         kwargs['after'] = after
@@ -247,9 +242,9 @@ class VideoAbstractModel(VkontakteModel):
     """
 
     def parse(self, response):
-        print "_____________________"
-        print response
-        print response['owner_id']
+        # print "_____________________"
+        # print response
+        # print response['owner_id']
 
         # TODO: перейти на ContentType и избавиться от метода
         owner_id = int(response.pop('owner_id'))

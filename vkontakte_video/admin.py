@@ -45,7 +45,7 @@ class VideoAdmin(VkontakteModelAdmin):
     text_with_link.allow_tags = True
     '''
 
-    list_display = ('image_preview', 'remote_id', 'title', 'comments_count', 'views_count', 'date')
+    list_display = ('image_preview', 'remote_id', 'title', 'video_album', 'comments_count', 'views_count', 'date')
     list_display_links = ('remote_id', 'title')
     list_filter = ('video_album',)
 
