@@ -32,7 +32,7 @@ class VideoRemoteManager(VkontakteTimelineManager):
 
         if owner_id:
             #kwargs.update({'owner_id': owner_id})
-            owner_id = '-%s' % owner_id
+            owner_id = -1 * owner_id
             kwargs.update({'owner_id': owner_id})
 
         # gid
@@ -45,7 +45,7 @@ class VideoRemoteManager(VkontakteTimelineManager):
 
         if video_album:
             if video_album.group:
-                owner_id = '-%d' % video_album.group.remote_id  # 16297716 -> -16297716
+                owner_id = -1 * video_album.group.remote_id  # 16297716 -> -16297716
             else:
                 owner_id = video_album.owner.remote_id
 
@@ -89,7 +89,7 @@ class VideoAlbumRemoteManager(VkontakteManager):
         kwargs['after'] = after
         kwargs['before'] = before
 
-        kwargs["v"] = '5.27'
+        kwargs['v'] = '5.27'
         kwargs['extended'] = 1
 
         return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
@@ -199,7 +199,7 @@ class CommentRemoteManager(VkontakteTimelineManager):
         kwargs['before'] = before
 
         kwargs['extra_fields'] = {'video_id': video.pk}
-        kwargs["v"] = '5.27'
+        kwargs['v'] = '5.27'
 #        try:
         return super(CommentRemoteManager, self).fetch(**kwargs)
 #         except VkontakteError, e:
@@ -280,7 +280,7 @@ class VideoAlbum(VideoAbstractModel):
     })
 
     class Meta:
-        get_latest_by = 'id'
+        get_latest_by = 'remote_id'
         verbose_name = u'Альбом видеозаписей Вконтакте'
         verbose_name_plural = u'Альбомы видеозаписей Вконтакте'
 
@@ -306,6 +306,7 @@ class VideoAlbum(VideoAbstractModel):
         return Video.remote.fetch(video_album=self, *args, **kwargs)
 
 
+@python_2_unicode_compatible
 class Video(VideoAbstractModel):
     #methods_namespace = 'video'
     #remote_pk_field = 'vid'
@@ -333,6 +334,14 @@ class Video(VideoAbstractModel):
     remote = VideoRemoteManager(remote_pk=('remote_id',), methods={
         'get': 'get',
     })
+
+    class Meta:
+        get_latest_by = 'remote_id'
+        verbose_name = u'Видеозапись Вконтакте'
+        verbose_name_plural = u'Видеозаписи Вконтакте'
+
+    def __str__(self):
+        return self.title
 
     @property
     def link(self):
@@ -477,13 +486,14 @@ class Photo(PhotosAbstractModel):
 class Comment(VkontakteModel, VkontakteCRUDModel):
 
     methods_namespace = 'video'
-    remote_pk_field = 'cid'
+    #remote_pk_field = 'cid'
     fields_required_for_update = ['comment_id', 'owner_id']
     _commit_remote = False
 
-    remote_id = models.CharField(u'ID', max_length='20', help_text=u'Уникальный идентификатор', unique=True)
+    remote_id = models.CharField(
+        u'ID', primary_key=True, max_length=20, help_text=u'Уникальный идентификатор', unique=True)
 
-    video = models.ForeignKey(Video, verbose_name=u'Фотография', related_name='comments')
+    video = models.ForeignKey(Video, verbose_name=u'Видеозапись', related_name='comments')
 
     author_content_type = models.ForeignKey(ContentType, related_name='photo_comments')
     author_id = models.PositiveIntegerField(db_index=True)
@@ -508,23 +518,27 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
     })
 
     class Meta:
-        verbose_name = u'Коммментарий фотографии Вконтакте'
-        verbose_name_plural = u'Коммментарии фотографий Вконтакте'
+        verbose_name = u'Комментарий видеозаписи Вконтакте'
+        verbose_name_plural = u'Комммнтарии видеозаписей Вконтакте'
 
     @property
     def remote_owner_id(self):
-        return self.photo.remote_id.split('_')[0]
+        # return self.photo.remote_id.split('_')[0]
+        if self.video.owner:
+            return self.video.owner.remote_id
+        else:
+            return self.video.group.remote_id
 
     @property
     def remote_id_short(self):
         return self.remote_id.split('_')[1]
 
     def prepare_create_params(self, from_group=False, **kwargs):
-        if self.author == self.photo.group:
+        if self.author == self.video.group:
             from_group = True
         kwargs.update({
             'owner_id': self.remote_owner_id,
-            'video_id': self.photo.remote_id_short,
+            'video_id': self.video.remote_id_short,
             'message': self.text,
 #            'reply_to_comment': self.reply_for.id if self.reply_for else '',
             'from_group': int(from_group),
@@ -563,11 +577,9 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
         return Model.objects.get_or_create(remote_id=abs(remote_id))
 
     def parse(self, response):
-        print response
-
         # undocummented feature of API. if from_id == 101 -> comment by group
         if response['from_id'] == 101:
-            self.author = self.photo.group
+            self.author = self.video.group
         else:
             self.author = self.get_or_create_group_or_user(response.pop('from_id'))[0]
 
