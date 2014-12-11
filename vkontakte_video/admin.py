@@ -22,11 +22,7 @@ class VideoInline(admin.TabularInline):
 class VideoAlbumAdmin(VkontakteModelAdmin):
 
     def image_preview(self, obj):
-        print obj.group.remote_id
-        print obj.remote_id
-
-        vk_link = 'https://vk.com/videos-%s?section=album_%s' % (obj.group.remote_id, obj.remote_id)
-        return u'<a href="%s"><img src="%s" height="30" /></a>' % (vk_link, obj.photo_160)
+        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.link, obj.photo_160)
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
 

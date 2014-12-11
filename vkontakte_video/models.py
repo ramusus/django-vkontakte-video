@@ -219,16 +219,16 @@ class VideoAbstractModel(VkontakteModel):
 
     methods_namespace = 'video'
 
-    remote_id = models.CharField(u'ID', max_length='20', help_text=u'Уникальный идентификатор', unique=True)
+    remote_id = models.BigIntegerField(u'ID', primary_key=True, help_text=u'Уникальный идентификатор', unique=True)
 
     class Meta:
         abstract = True
 
+    """
     @property
     def slug(self):
         return self.slug_prefix + str(self.remote_id)
 
-    """
     @property
     def remote_id_short(self):
         return self.remote_id.split('_')[1]
@@ -291,6 +291,16 @@ class VideoAlbum(VideoAbstractModel):
 
     def __str__(self):
         return self.title
+
+    @property
+    def link(self):
+        if self.owner:
+            owner_id = self.owner.remote_id
+        else:
+            owner_id = self.group.remote_id
+
+        vk_link = 'https://vk.com/videos-%s?section=album_%s' % (owner_id, self.remote_id)
+        return vk_link
 
     def parse(self, response):
         super(VideoAlbum, self).parse(response)
