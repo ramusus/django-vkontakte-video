@@ -28,17 +28,17 @@ ALBUM_PRIVACY_CHOCIES = (
 class VideoRemoteManager(VkontakteTimelineManager):
 
     @transaction.commit_on_success
-    def fetch(self, video_album=None, owner_id=None, group=None, **kwargs):
+    def fetch(self, video_album=None, user=None, group=None, ids=None, **kwargs):
 
-        if owner_id:
+        if user:
             #kwargs.update({'owner_id': owner_id})
-            owner_id = -1 * owner_id
-            kwargs.update({'owner_id': owner_id})
+            #owner_id = -1 * owner_id
+            kwargs.update({'owner_id': user.remote_id})
 
         # gid
         # ID группы, которой принадлежат альбомы.
         if group:
-            kwargs.update({'gid': group.remote_id})
+            kwargs.update({'owner_id': - 1 * group.remote_id})
 
         # print "__Video.fetch"
         # print "album: ", video_album.remote_id
@@ -52,6 +52,21 @@ class VideoRemoteManager(VkontakteTimelineManager):
             kwargs['owner_id'] = owner_id
             kwargs['album_id'] = video_album.remote_id
             kwargs['extra_fields'] = {'video_album_id': video_album.pk}
+
+        elif ids:
+            del(kwargs['owner_id'])
+
+            if group:
+                owner_id = -1 * group.remote_id  # 16297716 -> -16297716
+            else:
+                owner_id = user.remote_id
+
+            videos = []
+            for id in ids:
+                vid = '%s_%s' % (owner_id, id)
+                videos.append(vid)
+
+            kwargs['videos'] = ','.join(videos)
 
         kwargs['v'] = '5.27'
         kwargs['extended'] = 1
