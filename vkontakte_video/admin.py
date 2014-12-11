@@ -39,7 +39,7 @@ class VideoAlbumAdmin(VkontakteModelAdmin):
 class VideoAdmin(VkontakteModelAdmin):
 
     def image_preview(self, obj):
-        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.link, obj.image)
+        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.link, obj.photo_130)
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
     '''

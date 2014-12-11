@@ -270,23 +270,14 @@ class VideoAlbum(VideoAbstractModel):
     #slug_prefix = 'album'
 
     # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
-    owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True, related_name='photo_albums')
-    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True, related_name='photo_albums')
+    owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True, related_name='video_albums')
+    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True, related_name='video_albums')
 
-    #thumb_id = models.PositiveIntegerField(default=0)
-    #thumb_src = models.CharField(u'Обложка альбома', max_length='200')
     photo_160 = models.URLField(max_length=255)
 
     videos_count = models.PositiveIntegerField(u'Кол-во видеозаписей')
 
     title = models.CharField(max_length='200')
-    description = models.TextField()
-
-    #created = models.DateTimeField(null=True, db_index=True)
-    #updated = models.DateTimeField(null=True, db_index=True)
-
-    #size = models.PositiveIntegerField(u'Кол-во фотографий', default=0)
-    privacy = models.PositiveIntegerField(u'Уровень доступа к альбому', null=True, choices=ALBUM_PRIVACY_CHOCIES)
 
     objects = models.Manager()
     remote = VideoAlbumRemoteManager(remote_pk=('remote_id',), methods={
@@ -301,13 +292,13 @@ class VideoAlbum(VideoAbstractModel):
     def __str__(self):
         return self.title
 
-    @transaction.commit_on_success
-    def fetch_videos(self, *args, **kwargs):
-        return Video.remote.fetch(video_album=self, *args, **kwargs)
-
     def parse(self, response):
         super(VideoAlbum, self).parse(response)
         self.videos_count = response['count']
+
+    @transaction.commit_on_success
+    def fetch_videos(self, *args, **kwargs):
+        return Video.remote.fetch(video_album=self, *args, **kwargs)
 
 
 class Video(VideoAbstractModel):
@@ -316,9 +307,11 @@ class Video(VideoAbstractModel):
 
     video_album = models.ForeignKey(VideoAlbum, null=True, related_name='videos')
 
-    owner = models.ForeignKey(User, verbose_name=u'Владелец видео', null=True)  # , related_name='videos'
+    # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
+    owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True)  # , related_name='videos'
+    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True)  # , related_name='videos'
 
-    title = models.CharField(max_length='200')
+    title = models.CharField(max_length=255)
     description = models.TextField()
 
     duration = models.PositiveIntegerField(u'Продолжительность')
@@ -326,7 +319,7 @@ class Video(VideoAbstractModel):
     views_count = models.PositiveIntegerField(u'Кол-во просмотров', default=0)
 
     link = models.URLField(max_length=255)
-    image = models.URLField(max_length=255)
+    photo_130 = models.URLField(max_length=255)
     player = models.URLField(max_length=255)
 
     date = models.DateTimeField(help_text=u'Дата создания', db_index=True)
@@ -335,6 +328,16 @@ class Video(VideoAbstractModel):
     remote = VideoRemoteManager(remote_pk=('remote_id',), methods={
         'get': 'get',
     })
+
+    @property
+    def link(self):
+        if self.owner:
+            owner_id = self.owner.remote_id
+        else:
+            owner_id = self.group.remote_id
+
+        vk_link = 'https://vk.com/video-%s_%s' % (owner_id, self.remote_id)
+        return vk_link
 
     def parse(self, response):
         super(Video, self).parse(response)
