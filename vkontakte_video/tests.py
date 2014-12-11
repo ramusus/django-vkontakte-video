@@ -5,13 +5,13 @@ from django.test import TestCase
 from vkontakte_groups.factories import GroupFactory
 from vkontakte_users.factories import UserFactory, User
 
-from factories import AlbumFactory, PhotoFactory
-import mock
+from factories import AlbumFactory, VideoFactory
+#import mock
 from models import VideoAlbum, Video, Comment
 import simplejson as json
-GROUP_ID = 16297716
-ALBUM_ID = '-16297716_154228728'
-PHOTO_ID = '-16297716_280118215'
+GROUP_ID = 16297716  # https://vk.com/cocacola
+ALBUM_ID = 50850761  # 9 videos
+#PHOTO_ID = '-16297716_280118215'
 
 GROUP_CRUD_ID = 59154616
 PHOTO_CRUD_ID = '-59154616_321155660'
@@ -65,21 +65,25 @@ class VkontakteVideoModelTest(TestCase):
         self.assertEqual(len(albums), 5)
         '''
 
-    def test_fetch_group_photos(self):
+    def test_album_fetch_videos(self):
 
         group = GroupFactory(remote_id=GROUP_ID)
-        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+        #album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+
+        albums = VideoAlbum.remote.fetch(group=group)
+        album = VideoAlbum.objects.get(remote_id=ALBUM_ID)
 
         self.assertEqual(Video.objects.count(), 0)
 
         videos = album.fetch_videos()  # extended=True
 
-        self.assertTrue(len(photos) > 0)
+        self.assertTrue(len(videos) > 0)
+        self.assertEqual(album.videos_count, len(videos))
         self.assertEqual(Video.objects.count(), len(videos))
         self.assertEqual(videos[0].group, group)
-        self.assertEqual(videos[0].album, album)
-        self.assertTrue(videos[0].likes_count > 0)
-        self.assertTrue(videos[0].comments_count > 0)
+        self.assertEqual(videos[0].video_album, album)
+        #self.assertTrue(videos[0].likes_count > 0)
+        #self.assertTrue(videos[0].comments_count > 0)
 
         '''
         # testing `after` parameter
@@ -103,7 +107,11 @@ class VkontakteVideoModelTest(TestCase):
         self.assertEqual(len(photos), 1)
         '''
 
-    @mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
+
+class OldTests():
+
+    #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
+
     def test_video_fetch_comments(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
@@ -134,7 +142,7 @@ class VkontakteVideoModelTest(TestCase):
         self.assertEqual(len(comments), photo.comments.count())
         self.assertTrue(photo.comments.count() > 20)
 
-    @mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
+    #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
     def test_fetch_photo_likes(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
