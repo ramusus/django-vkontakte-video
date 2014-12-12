@@ -332,10 +332,14 @@ class Video(VideoAbstractModel):
     owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True)  # , related_name='videos'
     group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True)  # , related_name='videos'
 
+    like_users = models.ManyToManyField(User, related_name='like_videos')
+
     title = models.CharField(max_length=255)
     description = models.TextField()
 
     duration = models.PositiveIntegerField(u'Продолжительность')
+
+    likes_count = models.PositiveIntegerField(u'Лайков', default=0)
     comments_count = models.PositiveIntegerField(u'Кол-во комментариев', default=0)
     views_count = models.PositiveIntegerField(u'Кол-во просмотров', default=0)
 
@@ -376,6 +380,27 @@ class Video(VideoAbstractModel):
     @transaction.commit_on_success
     def fetch_comments(self, *args, **kwargs):
         return Comment.remote.fetch_by_video(video=self, *args, **kwargs)
+
+    #@transaction.commit_on_success
+    def fetch_likes(self, *args, **kwargs):
+
+#        kwargs['offset'] = int(kwargs.pop('offset', 0))
+        kwargs['likes_type'] = 'video'
+        kwargs['item_id'] = self.remote_id
+        kwargs['owner_id'] = self.group.remote_id
+        if isinstance(self.group, Group):
+            kwargs['owner_id'] *= -1
+
+        log.debug('Fetching likes of %s %s of owner "%s"' % (self._meta.module_name, self.remote_id, self.group))
+
+        users = User.remote.fetch_instance_likes(self, *args, **kwargs)
+
+        # update self.likes
+        self.likes_count = self.like_users.count()
+        self.save()
+
+        return users
+
 
 """
 class Photo(PhotosAbstractModel):
