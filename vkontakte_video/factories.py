@@ -16,7 +16,6 @@ class AlbumFactory(factory.DjangoModelFactory):
     group = factory.SubFactory(GroupFactory)
 
     videos_count = 0
-    views_count = 0
 
     class Meta:
         model = VideoAlbum
@@ -25,10 +24,12 @@ class AlbumFactory(factory.DjangoModelFactory):
 class VideoFactory(factory.DjangoModelFactory):
 
     remote_id = factory.LazyAttributeSequence(lambda o, n: n)
-    album = factory.SubFactory(AlbumFactory)
+    video_album = factory.SubFactory(AlbumFactory)
 
     owner = factory.SubFactory(UserFactory)
     group = factory.SubFactory(GroupFactory)
+
+    duration = 0
 
     date = datetime.now()
 

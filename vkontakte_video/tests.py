@@ -143,26 +143,26 @@ class VideoCommentTest(TestCase):
         self.assertEqual(len(comments), video.comments.count())
         self.assertTrue(video.comments.count() > 10)
 
-
-class OldTests():
-
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
 
-    def test_fetch_photo_likes(self, *kwargs):
+    def test_video_fetch_likes(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        photo = PhotoFactory(remote_id=PHOTO_ID, album=album, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
 
-        self.assertEqual(photo.likes_count, 0)
+        self.assertEqual(video.likes_count, 0)
         users_initial = User.objects.count()
 
-        users = photo.fetch_likes(all=True)
+        users = video.fetch_likes(all=True)
 
-        self.assertTrue(photo.likes_count > 0)
-        self.assertEqual(photo.likes_count, len(users))
-        self.assertEqual(photo.likes_count, User.objects.count() - users_initial)
-        self.assertEqual(photo.likes_count, photo.like_users.count())
+        self.assertTrue(video.likes_count > 0)
+        self.assertEqual(video.likes_count, len(users))
+        self.assertEqual(video.likes_count, User.objects.count() - users_initial)
+        self.assertEqual(video.likes_count, video.like_users.count())
+
+
+class OldTests():
 
     def test_fetch_photo_likes_parser(self):
 
