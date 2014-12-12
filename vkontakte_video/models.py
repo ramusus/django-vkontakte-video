@@ -51,7 +51,7 @@ class VideoRemoteManager(VkontakteTimelineManager):
 
             kwargs['owner_id'] = owner_id
             kwargs['album_id'] = video_album.remote_id
-            kwargs['extra_fields'] = {'video_album_id': video_album.pk}
+            #kwargs['extra_fields'] = {'video_album_id': video_album.pk}
 
         elif ids:
             del(kwargs['owner_id'])
@@ -283,7 +283,7 @@ class VideoAlbum(VideoAbstractModel):
     owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True, related_name='video_albums')
     group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True, related_name='video_albums')
 
-    photo_160 = models.URLField(max_length=255)
+    photo_160 = models.URLField(max_length=255, default='')
 
     videos_count = models.PositiveIntegerField(u'Кол-во видеозаписей')
 
@@ -376,6 +376,7 @@ class Video(VideoAbstractModel):
         super(Video, self).parse(response)
         self.comments_count = response['comments']
         self.views_count = response['views']
+        self.video_album_id = response['album_id']
 
     @transaction.commit_on_success
     def fetch_comments(self, *args, **kwargs):
@@ -559,7 +560,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
 
     class Meta:
         verbose_name = u'Комментарий видеозаписи Вконтакте'
-        verbose_name_plural = u'Комммнтарии видеозаписей Вконтакте'
+        verbose_name_plural = u'Комментарии видеозаписей Вконтакте'
 
     @property
     def remote_owner_id(self):
