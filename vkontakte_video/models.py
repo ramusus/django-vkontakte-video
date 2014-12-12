@@ -25,19 +25,52 @@ ALBUM_PRIVACY_CHOCIES = (
 )
 
 
+class VideoAlbumRemoteManager(VkontakteManager):
+
+    #timeline_force_ordering = True
+
+    def get_timeline_date(self, instance):
+        return instance.updated or instance.created or timezone.now()
+
+    @transaction.commit_on_success
+    def fetch(self, user=None, group=None, offset=0, count=100, **kwargs):
+        if not user and not group:
+            raise ValueError("You must specify user of group, which albums you want to fetch")
+
+        kwargs = {}
+
+        if user:
+            kwargs.update({'owner_id': user.remote_id})
+        elif group:
+            kwargs.update({'owner_id': - 1 * group.remote_id})
+
+        # offset смещение, необходимое для выборки определенного подмножества. По умолчанию — 0.
+        # положительное число
+        kwargs['offset'] = int(offset)
+
+        # count количество альбомов, которое необходимо получить.
+        kwargs['count'] = int(count)
+
+        kwargs['v'] = '5.27'
+        kwargs['extended'] = 1
+
+        return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
+
+
 class VideoRemoteManager(VkontakteTimelineManager):
 
     @transaction.commit_on_success
-    def fetch(self, video_album=None, user=None, group=None, ids=None, **kwargs):
+    def fetch(self, video_album=None, user=None, group=None, ids=None, before=None, after=None, offset=0, count=100, **kwargs):
+        if not (video_album or user or group):
+            raise ValueError("You must specify  or video album or user or group, which video you want to fetch")
+        if before and not after:
+            raise ValueError("Attribute `before` should be specified with attribute `after`")
+        if before and before < after:
+            raise ValueError("Attribute `before` should be later, than attribute `after`")
 
         if user:
-            #kwargs.update({'owner_id': owner_id})
-            #owner_id = -1 * owner_id
             kwargs.update({'owner_id': user.remote_id})
-
-        # gid
-        # ID группы, которой принадлежат альбомы.
-        if group:
+        elif group:
             kwargs.update({'owner_id': - 1 * group.remote_id})
 
         # print "__Video.fetch"
@@ -68,37 +101,12 @@ class VideoRemoteManager(VkontakteTimelineManager):
 
             kwargs['videos'] = ','.join(videos)
 
-        kwargs['v'] = '5.27'
-        kwargs['extended'] = 1
-        return super(VideoRemoteManager, self).fetch(**kwargs)
+        # offset смещение, необходимое для выборки определенного подмножества комментариев. По умолчанию — 0.
+        # положительное число
+        kwargs['offset'] = int(offset)
 
-
-class VideoAlbumRemoteManager(VkontakteManager):
-
-    #timeline_force_ordering = True
-
-    def get_timeline_date(self, instance):
-        return instance.updated or instance.created or timezone.now()
-
-    @transaction.commit_on_success
-    def fetch(self, user=None, group=None, before=None, after=None, **kwargs):
-        if not user and not group:
-            raise ValueError("You must specify user of group, which albums you want to fetch")
-        if before and not after:
-            raise ValueError("Attribute `before` should be specified with attribute `after`")
-        if before and before < after:
-            raise ValueError("Attribute `before` should be later, than attribute `after`")
-
-        kwargs = {}
-
-        # uid
-        # ID пользователя, которому принадлежат альбомы. По умолчанию – ID текущего пользователя.
-        if user:
-            kwargs.update({'uid': user.remote_id})
-        # gid
-        # ID группы, которой принадлежат альбомы.
-        if group:
-            kwargs.update({'gid': group.remote_id})
+        # count количество видеозаписей, которое необходимо получить.
+        kwargs['count'] = int(count)
 
         # special parameters
         kwargs['after'] = after
@@ -107,7 +115,8 @@ class VideoAlbumRemoteManager(VkontakteManager):
         kwargs['v'] = '5.27'
         kwargs['extended'] = 1
 
-        return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
+        return super(VideoRemoteManager, self).fetch(**kwargs)
+
 
 '''
 class PhotoRemoteManager(VkontakteTimelineManager):
