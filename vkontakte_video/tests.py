@@ -11,7 +11,7 @@ from models import VideoAlbum, Video, Comment
 import simplejson as json
 GROUP_ID = 16297716  # https://vk.com/cocacola
 ALBUM_ID = 50850761  # 9 videos
-#PHOTO_ID = '-16297716_280118215'
+VIDEO_ID = 166742757  # 12 comments
 
 GROUP_CRUD_ID = 59154616
 PHOTO_CRUD_ID = '-59154616_321155660'
@@ -108,19 +108,20 @@ class VkontakteVideoModelTest(TestCase):
         '''
 
 
-class OldTests():
+class VideoCommentTest(TestCase):
 
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
 
     def test_video_fetch_comments(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
-        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        photo = PhotoFactory(remote_id=PHOTO_ID, album=album, group=group)
+        #album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+        #photo = PhotoFactory(remote_id=PHOTO_ID, album=album, group=group)
+        video = Video.remote.fetch(group=group, ids=[VIDEO_ID])[0]
 
-        comments = photo.fetch_comments(count=20, sort='desc')
-        self.assertEqual(len(comments), photo.comments.count())
-        self.assertEqual(len(comments), 20)
+        comments = video.fetch_comments(count=10, sort='desc')
+        self.assertEqual(len(comments), video.comments.count())
+        self.assertEqual(len(comments), 10)
 
         # testing `after` parameter
         after = Comment.objects.order_by('date')[0].date.replace(tzinfo=None)
@@ -128,21 +129,25 @@ class OldTests():
         Comment.objects.all().delete()
         self.assertEqual(Comment.objects.count(), 0)
 
-        comments = photo.fetch_comments(after=after, sort='desc')
+        comments = video.fetch_comments(after=after, sort='desc')
         self.assertEqual(len(comments), Comment.objects.count())
-        self.assertEqual(len(comments), photo.comments.count())
-        self.assertEqual(len(comments), 21)
+        self.assertEqual(len(comments), video.comments.count())
+        self.assertEqual(len(comments), 11)
 
         # testing `all` parameter
         Comment.objects.all().delete()
         self.assertEqual(Comment.objects.count(), 0)
 
-        comments = photo.fetch_comments(all=True)
+        comments = video.fetch_comments(all=True)
         self.assertEqual(len(comments), Comment.objects.count())
-        self.assertEqual(len(comments), photo.comments.count())
-        self.assertTrue(photo.comments.count() > 20)
+        self.assertEqual(len(comments), video.comments.count())
+        self.assertTrue(video.comments.count() > 10)
+
+
+class OldTests():
 
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
+
     def test_fetch_photo_likes(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
