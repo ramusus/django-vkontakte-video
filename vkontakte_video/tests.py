@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
 from django.test import TestCase
+import json
 
 from vkontakte_groups.factories import GroupFactory
 from vkontakte_users.factories import UserFactory, User
 
 from factories import AlbumFactory, VideoFactory
-#import mock
 from models import VideoAlbum, Video, Comment
-import simplejson as json
+#import mock
 GROUP_ID = 16297716  # https://vk.com/cocacola
 ALBUM_ID = 50850761  # 9 videos
 VIDEO_ID = 166742757  # 12 comments
 
-GROUP_CRUD_ID = 59154616
-PHOTO_CRUD_ID = '-59154616_321155660'
-ALBUM_CRUD_ID = '-59154616_180124643'
-USER_AUTHOR_ID = 201164356
+GROUP_CRUD_ID = 82557438  # https://vk.com/club82557438
+ALBUM_CRUD_ID = 55926063
+VIDEO_CRUD_ID = 170710739
+#USER_AUTHOR_ID = 201164356
 
 
 class VkontakteVideoModelTest(TestCase):
@@ -161,6 +161,89 @@ class VideoCommentTest(TestCase):
         self.assertEqual(video.likes_count, User.objects.count() - users_initial)
         self.assertEqual(video.likes_count, video.like_users.count())
 
+    def test_comment_crud_methods(self):
+        group = GroupFactory(remote_id=GROUP_CRUD_ID)
+        album = AlbumFactory(remote_id=ALBUM_CRUD_ID, group=group)
+        video = VideoFactory(remote_id=VIDEO_CRUD_ID, video_album=album, group=group)
+
+        def assert_local_equal_to_remote(comment):
+            comment_remote = Comment.remote.fetch_by_video(video=comment.video).get(remote_id=comment.remote_id)
+            self.assertEqual(comment_remote.remote_id, comment.remote_id)
+            self.assertEqual(comment_remote.text, comment.text)
+            self.assertEqual(comment_remote.author, comment.author)
+
+        Comment.remote.fetch_by_video(video=video)
+        self.assertEqual(Comment.objects.count(), 0)
+
+        # create
+        comment = Comment(text='Test comment', video=video, author=group, date=datetime.now())
+        comment.save(commit_remote=True)
+        self.objects_to_delete += [comment]
+
+        self.assertEqual(Comment.objects.count(), 1)
+        self.assertEqual(comment.author, group)
+        self.assertNotEqual(len(comment.remote_id), 0)
+        assert_local_equal_to_remote(comment)
+
+        # create by manager
+        comment = Comment.objects.create(
+            text='Test comment created by manager', video=video, author=group, date=datetime.now(), commit_remote=True)
+        self.objects_to_delete += [comment]
+        self.assertEqual(Comment.objects.count(), 2)
+
+        self.assertEqual(Comment.objects.count(), 2)
+        self.assertEqual(comment.author, group)
+        self.assertNotEqual(len(comment.remote_id), 0)
+        assert_local_equal_to_remote(comment)
+
+        # update
+        comment.text = 'Test comment updated'
+        comment.save(commit_remote=True)
+
+        self.assertEqual(Comment.objects.count(), 2)
+        assert_local_equal_to_remote(comment)
+
+        # delete
+        comment.delete(commit_remote=True)
+
+        self.assertEqual(Comment.objects.count(), 2)
+        self.assertTrue(comment.archived)
+        self.assertEqual(Comment.remote.fetch_by_video(
+            video=comment.video).filter(remote_id=comment.remote_id).count(), 0)
+
+        # restore
+        comment.restore(commit_remote=True)
+        self.assertFalse(comment.archived)
+
+        self.assertEqual(Comment.objects.count(), 2)
+        assert_local_equal_to_remote(comment)
+
+    def test_parse_comment(self):
+
+        response = u'''{"date": 1387304612,
+            "text": "Даёшь \\"Байкал\\"!!!!",
+            "likes": {"count": 0, "can_like": 1, "user_likes": 0},
+            "id": 811,
+            "from_id": 27224390}
+        '''
+
+        group = GroupFactory(remote_id=GROUP_ID)
+        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+
+        instance = Comment(video=video)
+        instance.parse(json.loads(response))
+        instance.save()
+
+        # print instance.remote_owner_id
+        # print instance.text
+
+        # self.assertEqual(instance.remote_id, '-%s_811' % GROUP_ID) # TODO: '4_811'
+        self.assertEqual(instance.video, video)
+        self.assertEqual(instance.author.remote_id, 27224390)
+        self.assertEqual(instance.text, u'Даёшь "Байкал"!!!!')
+        self.assertIsNotNone(instance.date)
+
 
 class OldTests():
 
@@ -257,79 +340,3 @@ class OldTests():
         self.assertEqual(instance.remote_id, '-6492_146772677')
         self.assertEqual(instance.album, album)
         self.assertEqual(instance.group, group)
-
-    def test_parse_comment(self):
-
-        response = '''{"response":[21, {"date": 1387173931, "message": "[id94721323|\u0410\u043b\u0435\u043d\u0447\u0438\u043a], \u043d\u0435 1 \u0430 3 \u0431\u0430\u043d\u043a\u0430 5 \u043b\u0438\u0442\u0440\u043e\u0432 =20 \u0431\u0430\u043b\u043b\u043e\u0432", "from_id": 232760293, "likes": {"count": 1, "can_like": 1, "user_likes": 0}, "cid": 91121},
-            {"date": 1386245221, "message": "\u0410 1\u043b. \u0432 \u043f\u043e\u0434\u0430\u0440\u043e\u043a,\u0431\u043e\u043d\u0443\u0441 +))))", "from_id": 94721323, "likes": {"count": 0, "can_like": 1, "user_likes": 0}, "cid": 88976},
-            {"date": 1354592120, "message": "\u0445\u0430\u0445<br>", "from_id": 138571769, "likes": {"count": 0, "can_like": 1, "user_likes": 0}, "cid": 50392}]}
-        '''
-        group = GroupFactory(remote_id=GROUP_ID)
-        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        photo = PhotoFactory(remote_id=PHOTO_ID, album=album)
-        instance = Comment(photo=photo)
-        instance.parse(json.loads(response)['response'][1])
-        instance.save()
-
-        self.assertEqual(instance.remote_id, '-%s_91121' % GROUP_ID)
-        self.assertEqual(instance.photo, photo)
-        self.assertEqual(instance.author.remote_id, 232760293)
-        self.assertTrue(len(instance.text) > 10)
-        self.assertIsNotNone(instance.date)
-
-    def test_comment_crud_methods(self):
-        group = GroupFactory(remote_id=GROUP_CRUD_ID)
-        album = AlbumFactory(remote_id=ALBUM_CRUD_ID, group=group)
-        photo = PhotoFactory(remote_id=PHOTO_CRUD_ID, group=group, album=album)
-
-        def assert_local_equal_to_remote(comment):
-            comment_remote = Comment.remote.fetch_photo(photo=comment.photo).get(remote_id=comment.remote_id)
-            self.assertEqual(comment_remote.remote_id, comment.remote_id)
-            self.assertEqual(comment_remote.text, comment.text)
-            self.assertEqual(comment_remote.author, comment.author)
-
-        Comment.remote.fetch_photo(photo=photo)
-        self.assertEqual(Comment.objects.count(), 0)
-
-        # create
-        comment = Comment(text='Test comment', photo=photo, author=group, date=datetime.now())
-        comment.save(commit_remote=True)
-        self.objects_to_delete += [comment]
-
-        self.assertEqual(Comment.objects.count(), 1)
-        self.assertEqual(comment.author, group)
-        self.assertNotEqual(len(comment.remote_id), 0)
-        assert_local_equal_to_remote(comment)
-
-        # create by manager
-        comment = Comment.objects.create(
-            text='Test comment created by manager', photo=photo, author=group, date=datetime.now(), commit_remote=True)
-        self.objects_to_delete += [comment]
-        self.assertEqual(Comment.objects.count(), 2)
-
-        self.assertEqual(Comment.objects.count(), 2)
-        self.assertEqual(comment.author, group)
-        self.assertNotEqual(len(comment.remote_id), 0)
-        assert_local_equal_to_remote(comment)
-
-        # update
-        comment.text = 'Test comment updated'
-        comment.save(commit_remote=True)
-
-        self.assertEqual(Comment.objects.count(), 2)
-        assert_local_equal_to_remote(comment)
-
-        # delete
-        comment.delete(commit_remote=True)
-
-        self.assertEqual(Comment.objects.count(), 2)
-        self.assertTrue(comment.archived)
-        self.assertEqual(Comment.remote.fetch_photo(
-            photo=comment.photo).filter(remote_id=comment.remote_id).count(), 0)
-
-        # restore
-        comment.restore(commit_remote=True)
-        self.assertFalse(comment.archived)
-
-        self.assertEqual(Comment.objects.count(), 2)
-        assert_local_equal_to_remote(comment)
