@@ -19,14 +19,7 @@ VIDEO_CRUD_ID = 170710739
 #USER_AUTHOR_ID = 201164356
 
 
-class VkontakteVideoModelTest(TestCase):
-
-    def setUp(self):
-        self.objects_to_delete = []
-
-    def tearDown(self):
-        for object in self.objects_to_delete:
-            object.delete(commit_remote=True)
+class VideoAlbumTest(TestCase):
 
     def test_fetch_group_albums(self):
 
@@ -64,6 +57,34 @@ class VkontakteVideoModelTest(TestCase):
         self.assertEqual(len(albums), Album.objects.count())
         self.assertEqual(len(albums), 5)
         '''
+
+    def test_parse_album(self):
+
+        group = GroupFactory(remote_id=GROUP_ID)
+
+        d = {u'count': 16, u'photo_320': u'http://cs619722.vk.me/u8704019/video/l_6369beb6.jpg', u'title': u'Coca-Cola Football',
+             u'photo_160': u'http://cs619722.vk.me/u8704019/video/m_ef3493e1.jpg', u'id': 54387280, u'owner_id': -16297716}
+
+        instance = VideoAlbum()
+        instance.parse(d)
+        instance.save()
+
+        self.assertEqual(instance.group, group)
+
+        self.assertEqual(instance.pk, d['id'])
+        self.assertEqual(instance.title, d['title'])
+        self.assertEqual(instance.videos_count, d['count'])
+        self.assertEqual(instance.photo_160, d['photo_160'])
+
+
+class VideoTest(TestCase):
+
+    def setUp(self):
+        self.objects_to_delete = []
+
+    def tearDown(self):
+        for object in self.objects_to_delete:
+            object.delete(commit_remote=True)
 
     def test_album_fetch_videos(self):
 
@@ -107,6 +128,52 @@ class VkontakteVideoModelTest(TestCase):
         self.assertEqual(len(photos), 1)
         '''
 
+    def test_fetch_videos_by_ids(self):
+        group = GroupFactory(remote_id=GROUP_ID)
+        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+
+        self.assertEqual(Video.objects.count(), 0)
+
+        videos = Video.remote.fetch(group=group, ids=[VIDEO_ID])
+
+        self.assertEqual(len(videos), 1)
+        #self.assertEqual(album.videos_count, 1)
+        self.assertEqual(Video.objects.count(), 1)
+        self.assertEqual(videos[0].group, group)
+        self.assertEqual(videos[0].video_album, album)
+
+    def test_parse_video(self):
+
+        group = GroupFactory(remote_id=GROUP_ID)
+        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+
+        response = '''{"photo_130": "http://cs313422.vk.me/u163668241/video/s_6819a7d1.jpg",
+            "repeat": 0,
+            "photo_320": "http://cs313422.vk.me/u163668241/video/l_4cc8a38a.jpg",
+            "description": "bla bla bla",
+            "title": "Эстафета Олимпийского огня «Сочи 2014». Неделя 3-я",
+            "can_repost": 1, "views": 928, "album_id": 50850761, "comments": 12, "player": "http://www.youtube.com/embed/UmDAmM53bU0", "date": 1386074580, "likes": {"count": 191, "user_likes": 0}, "duration": 206, "can_comment": 1, "id": 166742757, "owner_id": -16297716}
+        '''
+        d = json.loads(response)
+
+        instance = Video()
+        instance.parse(d)
+        instance.save()
+
+        self.assertEqual(instance.video_album, album)
+        self.assertEqual(instance.group, group)
+
+        self.assertEqual(instance.remote_id, d['id'])
+        self.assertEqual(instance.title, d['title'])
+        self.assertEqual(instance.description, d['description'])
+        self.assertEqual(instance.photo_130, d['photo_130'])
+        self.assertEqual(instance.player, d['player'])
+        self.assertEqual(instance.views_count, d['views'])
+        self.assertEqual(instance.comments_count, d['comments'])
+        self.assertEqual(instance.duration, d['duration'])
+
+        self.assertIsNotNone(instance.date)
+
 
 class VideoCommentTest(TestCase):
 
@@ -116,7 +183,7 @@ class VideoCommentTest(TestCase):
 
         group = GroupFactory(remote_id=GROUP_ID)
         #album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        #photo = PhotoFactory(remote_id=PHOTO_ID, album=album, group=group)
+        # not factory coz we need video.comments_count later
         video = Video.remote.fetch(group=group, ids=[VIDEO_ID])[0]
 
         comments = video.fetch_comments(count=10, sort='desc')
@@ -141,6 +208,7 @@ class VideoCommentTest(TestCase):
         comments = video.fetch_comments(all=True)
         self.assertEqual(len(comments), Comment.objects.count())
         self.assertEqual(len(comments), video.comments.count())
+        self.assertEqual(len(comments), video.comments_count)
         self.assertTrue(video.comments.count() > 10)
 
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
@@ -266,77 +334,3 @@ class OldTests():
         self.assertEqual(photo.comments_count, 0)
         photo.fetch_comments_parser()
         self.assertTrue(photo.comments_count > 0)
-
-    def test_parse_album(self):
-
-        response = '''{"response":[{"aid":"16178407","thumb_id":"96509883","owner_id":"6492","title":"qwerty",
-            "description":"desc","created":"1298365200","updated":"1298365201","size":"3",
-            "privacy":"3"},{"aid":"17071606","thumb_id":"98054577","owner_id":"-6492",
-            "title":"","description":"","created":"1204576880","updated":"1229532461",
-            "size":"3","privacy":"0"}]}
-            '''
-        instance = Album()
-        owner = UserFactory(remote_id=6492)
-        instance.parse(json.loads(response)['response'][0])
-        instance.save()
-
-        self.assertEqual(instance.remote_id, '6492_16178407')
-        self.assertEqual(instance.thumb_id, 96509883)
-        self.assertEqual(instance.owner, owner)
-        self.assertEqual(instance.title, 'qwerty')
-        self.assertEqual(instance.description, 'desc')
-        self.assertEqual(instance.size, 3)
-        self.assertEqual(instance.privacy, 3)
-        self.assertIsNotNone(instance.created)
-        self.assertIsNotNone(instance.updated)
-
-        instance = Album()
-        group = GroupFactory(remote_id=6492)
-        instance.parse(json.loads(response)['response'][1])
-        instance.save()
-
-        self.assertEqual(instance.remote_id, '-6492_17071606')
-        self.assertEqual(instance.group, group)
-
-    def test_parse_photo(self):
-
-        response = '''{"response":[{"pid":"146771291","aid":"100001227","owner_id":"6492",
-            "src":"http://cs9231.vkontakte.ru/u06492/100001227/m_7875d2fb.jpg",
-            "src_big":"http://cs9231.vkontakte.ru/u06492/100001227/x_cd563004.jpg",
-            "src_small":"http://cs9231.vkontakte.ru/u06492/100001227/s_c3bba2a8.jpg",
-            "src_xbig":"http://cs9231.vkontakte.ru/u06492/100001227/y_62a74569.jpg",
-            "src_xxbig":"http://cs9231.vkontakte.ru/u06492/100001227/z_793e9682.jpg",
-            "text":"test","user_id":6492,"width":10,"height":10,
-            "created":"1298365200"},{"pid":"146772677","aid":"100001227","owner_id":-6492,
-            "src":"http://cs9231.vkontakte.ru/u06492/100001227/m_fd092958.jpg",
-            "src_big":"http://cs9231.vkontakte.ru/u06492/100001227/x_1f8ec9b8.jpg",
-            "src_small":"http://cs9231.vkontakte.ru/u06492/100001227/s_603d27ab.jpg",
-            "src_xbig":"http://cs9231.vkontakte.ru/u06492/100001227/y_6938f576.jpg",
-            "src_xxbig":"http://cs9231.vkontakte.ru/u06492/100001227/z_6a27e9fd.jpg",
-            "text":"test","user_id":6492,"width":10,"height":10,
-            "created":"1260887080"}]}
-            '''
-        instance = Photo()
-        owner = UserFactory(remote_id=6492)
-        album = AlbumFactory(remote_id='6492_100001227')
-        instance.parse(json.loads(response)['response'][0])
-        instance.save()
-
-        self.assertEqual(instance.remote_id, '6492_146771291')
-        self.assertEqual(instance.album, album)
-        self.assertEqual(instance.owner, owner)
-        self.assertEqual(instance.src, 'http://cs9231.vkontakte.ru/u06492/100001227/m_7875d2fb.jpg')
-        self.assertEqual(instance.text, 'test')
-        self.assertEqual(instance.width, 10)
-        self.assertEqual(instance.height, 10)
-        self.assertIsNotNone(instance.created)
-
-        instance = Photo()
-        group = GroupFactory(remote_id=6492)
-        album = AlbumFactory(remote_id='-6492_100001227')
-        instance.parse(json.loads(response)['response'][1])
-        instance.save()
-
-        self.assertEqual(instance.remote_id, '-6492_146772677')
-        self.assertEqual(instance.album, album)
-        self.assertEqual(instance.group, group)
