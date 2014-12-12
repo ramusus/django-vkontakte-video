@@ -175,7 +175,7 @@ class VideoTest(TestCase):
         self.assertIsNotNone(instance.date)
 
 
-class VideoCommentTest(TestCase):
+class CommentTest(TestCase):
 
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
 

@@ -536,7 +536,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
 
     video = models.ForeignKey(Video, verbose_name=u'Видеозапись', related_name='comments')
 
-    author_content_type = models.ForeignKey(ContentType, related_name='photo_comments')
+    author_content_type = models.ForeignKey(ContentType, related_name='video_comments')
     author_id = models.PositiveIntegerField(db_index=True)
     author = generic.GenericForeignKey('author_content_type', 'author_id')
 
