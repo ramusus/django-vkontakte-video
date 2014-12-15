@@ -5,13 +5,10 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.encoding import python_2_unicode_compatible
 import logging
-from parser import VkontaktePhotosParser
 import re
 
-from vkontakte_api import fields
 from vkontakte_api.decorators import fetch_all
 from vkontakte_api.models import VkontakteManager, VkontakteTimelineManager, VkontakteModel, VkontakteCRUDModel
-from vkontakte_api.utils import api_call
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
 #import signals
