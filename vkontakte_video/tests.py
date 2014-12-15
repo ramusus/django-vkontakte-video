@@ -309,16 +309,14 @@ class CommentTest(TestCase):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+        #video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+        video = Video.remote.fetch(group=group, ids=[VIDEO_ID])[0]
 
         instance = Comment(video=video)
         instance.parse(json.loads(response))
         instance.save()
 
-        # print instance.remote_owner_id
-        # print instance.text
-
-        # self.assertEqual(instance.remote_id, '-%s_811' % GROUP_ID) # TODO: '4_811'
+        self.assertEqual(instance.remote_id, '-%s_811' % GROUP_ID)  # TODO: '4_811'
         self.assertEqual(instance.video, video)
         self.assertEqual(instance.author.remote_id, 27224390)
         self.assertEqual(instance.text, u'Даёшь "Байкал"!!!!')
