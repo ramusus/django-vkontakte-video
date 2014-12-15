@@ -577,7 +577,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
         if self.video.owner:
             return self.video.owner.remote_id
         else:
-            return self.video.group.remote_id
+            return -1 * self.video.group.remote_id
 
     @property
     def remote_id_short(self):
@@ -588,7 +588,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
             from_group = True
         kwargs.update({
             'owner_id': self.remote_owner_id,
-            'video_id': self.video.remote_id_short,
+            'video_id': self.video.remote_id,  # remote_id_short,
             'message': self.text,
 #            'reply_to_comment': self.reply_for.id if self.reply_for else '',
             'from_group': int(from_group),
