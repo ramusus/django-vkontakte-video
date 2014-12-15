@@ -34,30 +34,24 @@ class VideoAlbumTest(TestCase):
         self.assertEqual(VideoAlbum.objects.count(), len(albums))
         self.assertEqual(albums[0].group, group)
 
-        '''
-        # check force ordering
-        self.assertListEqual(list(albums), list(Album.objects.order_by('-updated')))
+    def test_fetch_with_count_and_offset(self):
+        # testing `count` parameter, count is the same as limit
+        group = GroupFactory(remote_id=GROUP_ID)
 
-        # testing `after` parameter
-        after = Album.objects.order_by('-updated')[10].updated.replace(tzinfo=None)
+        self.assertEqual(VideoAlbum.objects.count(), 0)
 
-        Album.objects.all().delete()
-        self.assertEqual(Album.objects.count(), 0)
+        albums = VideoAlbum.remote.fetch(group=group, count=5)
 
-        albums = group.fetch_albums(after=after)
-        self.assertEqual(len(albums), Album.objects.count())
-        self.assertEqual(len(albums), 11)
-
-        # testing `before` parameter
-        before = Album.objects.order_by('-updated')[5].updated.replace(tzinfo=None)
-
-        Album.objects.all().delete()
-        self.assertEqual(Album.objects.count(), 0)
-
-        albums = group.fetch_albums(before=before, after=after)
-        self.assertEqual(len(albums), Album.objects.count())
         self.assertEqual(len(albums), 5)
-        '''
+        self.assertEqual(VideoAlbum.objects.count(), 5)
+
+        # testing `offset` parameter
+        albums2 = VideoAlbum.remote.fetch(group=group, count=2, offset=4)
+
+        self.assertEqual(len(albums2), 2)
+        self.assertEqual(VideoAlbum.objects.count(), 6)
+
+        self.assertEqual(albums[4].remote_id, albums2[0].remote_id)
 
     def test_parse_album(self):
 
@@ -85,7 +79,7 @@ class VideoTest(TestCase):
         group = GroupFactory(remote_id=GROUP_ID)
         #album = AlbumFactory(remote_id=ALBUM_ID, group=group)
 
-        albums = VideoAlbum.remote.fetch(group=group)
+        albums = VideoAlbum.remote.fetch(group=group)   # have to fetch for album.videos_count
         album = VideoAlbum.objects.get(remote_id=ALBUM_ID)
 
         self.assertEqual(Video.objects.count(), 0)
@@ -98,7 +92,7 @@ class VideoTest(TestCase):
         self.assertEqual(videos[0].group, group)
         self.assertEqual(videos[0].video_album, album)
         #self.assertTrue(videos[0].likes_count > 0)
-        #self.assertTrue(videos[0].comments_count > 0)
+        self.assertTrue(videos[0].comments_count > 0)
 
         # testing `after` parameter
         after = Video.objects.order_by('-date')[4].date
@@ -128,6 +122,26 @@ class VideoTest(TestCase):
 
         date = videos.last().date
         self.assertLessEqual(date, before)
+
+    def test_fetch_with_count_and_offset(self):
+        # testing `count` parameter, count is the same as limit
+        group = GroupFactory(remote_id=GROUP_ID)
+        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+
+        self.assertEqual(Video.objects.count(), 0)
+
+        videos = album.fetch_videos(count=5)
+
+        self.assertEqual(len(videos), 5)
+        self.assertEqual(Video.objects.count(), 5)
+
+        # testing `offset` parameter
+        videos2 = album.fetch_videos(count=2, offset=4)
+
+        self.assertEqual(len(videos2), 2)
+        self.assertEqual(Video.objects.count(), 6)
+
+        self.assertEqual(videos[4].remote_id, videos2[0].remote_id)
 
     def test_fetch_videos_by_ids(self):
         group = GroupFactory(remote_id=GROUP_ID)
@@ -221,6 +235,27 @@ class CommentTest(TestCase):
         self.assertEqual(len(comments), video.comments.count())
         self.assertEqual(len(comments), video.comments_count)
         self.assertTrue(video.comments.count() > 10)
+
+    def test_fetch_with_count_and_offset(self):
+        # testing `count` parameter, count is the same as limit
+        group = GroupFactory(remote_id=GROUP_ID)
+        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group, owner=None)
+
+        self.assertEqual(Comment.objects.count(), 0)
+
+        comments = video.fetch_comments(count=5)
+
+        self.assertEqual(len(comments), 5)
+        self.assertEqual(Comment.objects.count(), 5)
+
+        # testing `offset` parameter
+        comments2 = video.fetch_comments(count=2, offset=4)
+
+        self.assertEqual(len(comments2), 2)
+        self.assertEqual(Comment.objects.count(), 6)
+
+        self.assertEqual(comments[4].remote_id, comments2[0].remote_id)
 
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
 
