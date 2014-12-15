@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
 from django.test import TestCase
+from django.utils import timezone
 import json
 
 from vkontakte_groups.factories import GroupFactory
@@ -8,6 +8,7 @@ from vkontakte_users.factories import UserFactory, User
 
 from factories import AlbumFactory, VideoFactory
 from models import VideoAlbum, Video, Comment
+#from datetime import datetime
 #import mock
 GROUP_ID = 16297716  # https://vk.com/cocacola
 ALBUM_ID = 50850761  # 9 videos
@@ -106,27 +107,34 @@ class VideoTest(TestCase):
         #self.assertTrue(videos[0].likes_count > 0)
         #self.assertTrue(videos[0].comments_count > 0)
 
-        '''
         # testing `after` parameter
-        after = Photo.objects.order_by('-created')[4].created.replace(tzinfo=None)
+        after = Video.objects.order_by('-date')[4].date
 
-        Photo.objects.all().delete()
-        self.assertEqual(Photo.objects.count(), 0)
+        Video.objects.all().delete()
+        self.assertEqual(Video.objects.count(), 0)
 
-        photos = album.fetch_photos(after=after)
-        self.assertEqual(len(photos), Photo.objects.count())
-        self.assertEqual(len(photos), 5)
+        videos = album.fetch_videos(after=after)
+        self.assertEqual(len(videos), Video.objects.count())
+        self.assertEqual(len(videos), 5)
+
+        date = videos[0].date
+        self.assertGreaterEqual(date, after)
 
         # testing `before` parameter
-        before = Photo.objects.order_by('-created')[2].created.replace(tzinfo=None)
+        before = Video.objects.order_by('-date')[2].date
 
-        Photo.objects.all().delete()
-        self.assertEqual(Photo.objects.count(), 0)
+        Video.objects.all().delete()
+        self.assertEqual(Video.objects.count(), 0)
 
-        photos = album.fetch_photos(before=before, after=after)
-        self.assertEqual(len(photos), Photo.objects.count())
-        self.assertEqual(len(photos), 1)
-        '''
+        videos = album.fetch_videos(before=before, after=after)
+        self.assertEqual(len(videos), Video.objects.count())
+        self.assertEqual(len(videos), 3)
+
+        date = videos[0].date
+        self.assertGreaterEqual(date, after)
+
+        date = videos.last().date
+        self.assertLessEqual(date, before)
 
     def test_fetch_videos_by_ids(self):
         group = GroupFactory(remote_id=GROUP_ID)
@@ -191,7 +199,7 @@ class CommentTest(TestCase):
         self.assertEqual(len(comments), 10)
 
         # testing `after` parameter
-        after = Comment.objects.order_by('date')[0].date.replace(tzinfo=None)
+        after = Comment.objects.order_by('-date')[2].date
 
         Comment.objects.all().delete()
         self.assertEqual(Comment.objects.count(), 0)
@@ -199,7 +207,10 @@ class CommentTest(TestCase):
         comments = video.fetch_comments(after=after, sort='desc')
         self.assertEqual(len(comments), Comment.objects.count())
         self.assertEqual(len(comments), video.comments.count())
-        self.assertEqual(len(comments), 11)
+        self.assertEqual(len(comments), 3)
+
+        date = comments[0].date
+        self.assertGreaterEqual(date, after)
 
         # testing `all` parameter
         Comment.objects.all().delete()
@@ -244,7 +255,7 @@ class CommentTest(TestCase):
         self.assertEqual(Comment.objects.count(), 0)
 
         # create
-        comment = Comment(text='Test comment', video=video, author=group, date=datetime.now())
+        comment = Comment(text='Test comment', video=video, author=group, date=timezone.now())
         comment.save(commit_remote=True)
         self.objects_to_delete += [comment]
 
@@ -255,7 +266,7 @@ class CommentTest(TestCase):
 
         # create by manager
         comment = Comment.objects.create(
-            text='Test comment created by manager', video=video, author=group, date=datetime.now(), commit_remote=True)
+            text='Test comment created by manager', video=video, author=group, date=timezone.now(), commit_remote=True)
         self.objects_to_delete += [comment]
         self.assertEqual(Comment.objects.count(), 2)
 
