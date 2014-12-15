@@ -14,9 +14,9 @@ GROUP_ID = 16297716  # https://vk.com/cocacola
 ALBUM_ID = 50850761  # 9 videos
 VIDEO_ID = 166742757  # 12 comments
 
-GROUP_CRUD_ID = 82557438  # https://vk.com/club82557438
-ALBUM_CRUD_ID = 55926063
-VIDEO_CRUD_ID = 170710739
+GROUP_CRUD_ID = 59154616  # https://vk.com/club59154616 # django-vkontakte-wall crud operations
+ALBUM_CRUD_ID = 55964907
+VIDEO_CRUD_ID = 170947024
 #USER_AUTHOR_ID = 201164356
 
 
@@ -79,13 +79,6 @@ class VideoAlbumTest(TestCase):
 
 
 class VideoTest(TestCase):
-
-    def setUp(self):
-        self.objects_to_delete = []
-
-    def tearDown(self):
-        for object in self.objects_to_delete:
-            object.delete(commit_remote=True)
 
     def test_album_fetch_videos(self):
 
@@ -185,6 +178,13 @@ class VideoTest(TestCase):
 
 class CommentTest(TestCase):
 
+    def setUp(self):
+        self.objects_to_delete = []
+
+    def tearDown(self):
+        for object in self.objects_to_delete:
+            object.delete(commit_remote=True)
+
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
 
     def test_video_fetch_comments(self, *kwargs):
@@ -243,7 +243,8 @@ class CommentTest(TestCase):
     def test_comment_crud_methods(self):
         group = GroupFactory(remote_id=GROUP_CRUD_ID)
         album = AlbumFactory(remote_id=ALBUM_CRUD_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_CRUD_ID, video_album=album, group=group)
+        #video = VideoFactory(remote_id=VIDEO_CRUD_ID, video_album=album, group=group)
+        video = Video.remote.fetch(group=group, ids=[VIDEO_CRUD_ID])[0]
 
         def assert_local_equal_to_remote(comment):
             comment_remote = Comment.remote.fetch_by_video(video=comment.video).get(remote_id=comment.remote_id)
