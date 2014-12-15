@@ -73,9 +73,6 @@ class VideoRemoteManager(VkontakteTimelineManager):
         elif group:
             kwargs.update({'owner_id': - 1 * group.remote_id})
 
-        # print "__Video.fetch"
-        # print "album: ", video_album.remote_id
-
         if video_album:
             if video_album.group:
                 owner_id = -1 * video_album.group.remote_id  # 16297716 -> -16297716
@@ -266,10 +263,6 @@ class VideoAbstractModel(VkontakteModel):
     """
 
     def parse(self, response):
-        # print "_____________________"
-        # print response
-        # print response['owner_id']
-
         # TODO: перейти на ContentType и избавиться от метода
         owner_id = int(response.pop('owner_id'))
         if owner_id > 0:
