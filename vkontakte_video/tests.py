@@ -277,8 +277,7 @@ class CommentTest(TestCase):
     def test_comment_crud_methods(self):
         group = GroupFactory(remote_id=GROUP_CRUD_ID)
         album = AlbumFactory(remote_id=ALBUM_CRUD_ID, group=group)
-        #video = VideoFactory(remote_id=VIDEO_CRUD_ID, video_album=album, group=group)
-        video = Video.remote.fetch(group=group, ids=[VIDEO_CRUD_ID])[0]
+        video = VideoFactory(remote_id=VIDEO_CRUD_ID, video_album=album, group=group)
 
         def assert_local_equal_to_remote(comment):
             comment_remote = Comment.remote.fetch_by_video(video=comment.video).get(remote_id=comment.remote_id)
@@ -343,8 +342,7 @@ class CommentTest(TestCase):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        #video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
-        video = Video.remote.fetch(group=group, ids=[VIDEO_ID])[0]
+        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
 
         instance = Comment(video=video)
         instance.parse(json.loads(response))
@@ -355,6 +353,38 @@ class CommentTest(TestCase):
         self.assertEqual(instance.author.remote_id, 27224390)
         self.assertEqual(instance.text, u'Даёшь "Байкал"!!!!')
         self.assertIsNotNone(instance.date)
+
+
+class OtherTests(TestCase):
+
+    def test_fetch_by_user_parameter(self):
+        user = UserFactory(remote_id=13312307)
+
+        # fetch albums
+        video_albums = VideoAlbum.remote.fetch(user=user)
+        self.assertGreater(len(video_albums), 0)
+        self.assertEqual(VideoAlbum.objects.count(), len(video_albums))
+        self.assertEqual(video_albums[0].owner, user)
+
+        # fetch album videos
+        album = video_albums[0]
+        videos = album.fetch_videos()
+        self.assertGreater(len(videos), 0)
+        self.assertEqual(Video.objects.count(), len(videos))
+        self.assertEqual(videos[0].owner, user)
+
+        # fetch user video comments
+        video = videos[0]
+        comments = video.fetch_comments()
+        self.assertGreater(len(comments), 0)
+        self.assertEqual(Comment.objects.count(), len(comments))
+        self.assertEqual(comments[0].author, user)
+
+        # fetch all user videos
+        videos = Video.remote.fetch(user=user)
+        self.assertGreater(len(videos), 0)
+        self.assertEqual(Video.objects.count(), len(videos))
+        self.assertEqual(videos[0].owner, user)
 
 
 class OldTests():
