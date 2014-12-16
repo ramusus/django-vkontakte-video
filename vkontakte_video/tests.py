@@ -2,6 +2,7 @@
 from django.test import TestCase
 from django.utils import timezone
 import json
+import mock
 
 from vkontakte_groups.factories import GroupFactory
 from vkontakte_users.factories import UserFactory, User
@@ -199,8 +200,7 @@ class CommentTest(TestCase):
         for object in self.objects_to_delete:
             object.delete(commit_remote=True)
 
-    #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
-
+    @mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
     def test_video_fetch_comments(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
@@ -258,7 +258,6 @@ class CommentTest(TestCase):
         self.assertEqual(comments[4].remote_id, comments2[0].remote_id)
 
     #@mock.patch('vkontakte_users.models.User.remote.fetch', side_effect=lambda ids, **kw: User.objects.filter(id__in=[user.id for user in [UserFactory.create(remote_id=i) for i in ids]]))
-
     def test_video_fetch_likes(self, *kwargs):
 
         group = GroupFactory(remote_id=GROUP_ID)
