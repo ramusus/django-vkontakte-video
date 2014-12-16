@@ -60,7 +60,7 @@ Django Vkontakte Video
     >>> group.video_albums.count()
     7
 
-Фотографии всех альбомов группы доступны через менеджер
+Видезаписи всех альбомов группы доступны через менеджер
 
     >>> group.videos.count()
     9
