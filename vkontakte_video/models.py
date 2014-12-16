@@ -375,7 +375,7 @@ class Video(VideoAbstractModel):
         super(Video, self).parse(response)
         self.comments_count = response['comments']
         self.views_count = response['views']
-        self.video_album_id = response['album_id']
+        self.video_album_id = response.get('album_id', None)
 
     @transaction.commit_on_success
     def fetch_comments(self, *args, **kwargs):
