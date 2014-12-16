@@ -25,15 +25,19 @@ ALBUM_PRIVACY_CHOCIES = (
 class CountOffsetManagerMixin(VkontakteManager):
 
     def fetch(self, count=100, offset=0, **kwargs):
+        count = int(count)
         if count > 100:
             raise ValueError("Attribute 'count' can not be more than 100")
 
         # count количество элементов, которое необходимо получить.
-        kwargs['count'] = int(count)
+        if count:
+            kwargs['count'] = count
 
         # offset смещение, необходимое для выборки определенного подмножества. По умолчанию — 0.
         # положительное число
-        kwargs['offset'] = int(offset)
+        offset = int(offset)
+        if offset:
+            kwargs['offset'] = offset
 
         return super(CountOffsetManagerMixin, self).fetch(**kwargs)
 
@@ -47,8 +51,10 @@ class AfterBeforeManagerMixin(VkontakteTimelineManager):
             raise ValueError("Attribute `before` should be later, than attribute `after`")
 
         # special parameters
-        kwargs['after'] = after
-        kwargs['before'] = before
+        if after:
+            kwargs['after'] = after
+        if before:
+            kwargs['before'] = before
 
         return super(AfterBeforeManagerMixin, self).fetch(**kwargs)
 
