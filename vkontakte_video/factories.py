@@ -2,8 +2,8 @@ from django.utils import timezone
 import random
 import factory
 
-from vkontakte_groups.factories import GroupFactory
-from vkontakte_users.factories import UserFactory
+#from vkontakte_groups.factories import GroupFactory
+#from vkontakte_users.factories import UserFactory
 
 from . models import VideoAlbum, Video
 
@@ -12,8 +12,9 @@ class AlbumFactory(factory.DjangoModelFactory):
 
     remote_id = factory.LazyAttributeSequence(lambda o, n: n)
 
-    owner = factory.SubFactory(UserFactory)
-    group = factory.SubFactory(GroupFactory)
+    # should not be setting together
+    #owner = factory.SubFactory(UserFactory)
+    #group = factory.SubFactory(GroupFactory)
 
     videos_count = 0
 
