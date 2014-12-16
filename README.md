@@ -34,66 +34,44 @@ Django Vkontakte Video
 
 Покрытие методов API
 --------------------
-
-* [photos.getAlbums](http://vk.com/dev/photos.getAlbums) – возвращает список альбомов пользователя;
-...
-
-В планах:
-
-...
-
-Использование парсера
----------------------
-
-* Получение количества комментариев к фотографии; *
-* Получение количества лайков фотографии; *
-
-(*) Дублирование функционала API
+* [video.getAlbums](https://vk.com/dev/video.getAlbums) – Возвращает список альбомов видеозаписей пользователя или сообщества.
+* [video.get](https://vk.com/dev/video.get) – Возвращает информацию о видеозаписях.
+* [video.getComments](https://vk.com/dev/video.getComments) – Возвращает список комментариев к видеозаписи.
 
 Примеры использования
 ---------------------
 
-### Получение фотоальбомов группы через метод группы
+### Получение видеольбомов
 
 Для этого необходимо установить дополнительно приложение
 [`django-vkontakte-groups`](http://github.com/ramusus/django-vkontakte-groups/) и добавить его в `INSTALLED_APPS`
 
     >>> from vkontakte_groups.models import Group
+    >>> from vkontakte_video.models import VideoAlbum
+    >>>
     >>> group = Group.remote.fetch(ids=[16297716])[0]
-    >>> group.fetch_albums()
-    [<Album: Coca-Cola привозила кубок мира по футболу FIFA>,
-     <Album: Старая реклама Coca-Cola>,
-     '...(remaining elements truncated)...']
+    >>> VideoAlbum.remote.fetch(group=group)
+    [<VideoAlbum: Coca-Cola Football>,
+    <VideoAlbum: Эстафета Олимпийского огня "Сочи 2014">,
+    <VideoAlbum: Олимпиада>...]
 
-Фотоальбомы группы доступны через менеджер
+Ведеоальбомы группы доступны через менеджер
 
-    >>> group.photo_albums.count()
-    47
+    >>> group.video_albums.count()
+    7
 
 Фотографии всех альбомов группы доступны через менеджер
 
-    >>> group.photos.count()
-    4432
+    >>> group.videos.count()
+    9
 
-### Получение фотоальбомов группы через менеджер
-
+### Получение видоезаписей альбома группы через менеджер
     >>> from vkontakte_groups.models import Group
-    >>> from vkontakte_photos.models import Album
+    >>> from vkontakte_video.models import VideoAlbum, Video
+    >>>
     >>> group = Group.remote.fetch(ids=[16297716])[0]
-    >>> Album.remote.fetch(group=group, ids=[106769855])
-    [<Album: Coca-Cola привозила кубок мира по футболу FIFA>]
-
-### Получение фотографий альбома пользователя через менеджер
-
-Для этого необходимо установить дополнительно приложение
-[`django-vkontakte-users`](http://github.com/ramusus/django-vkontakte-users/) и добавить его в `INSTALLED_APPS`
-
-    >>> from vkontakte_users.models import User
-    >>> from vkontakte_photos.models import Album, Photo
-    >>> user = User.remote.fetch(ids=[1])[0]
-    >>> album = Album.remote.fetch(user=user, ids=[159337866])[0]
-    >>> Photo.remote.fetch(album=album)
-    [<Photo: Photo object>,
-     <Photo: Photo object>,
-     <Photo: Photo object>,
-     <Photo: Photo object>]
+    >>> video_album = VideoAlbum.remote.fetch(group=group)[0]
+    >>> video_album.fetch_videos()
+    [<Video: БРРРАЗИЛИЯ ОТВЕТИТ 08: Финал ЧМ | Картавый футбол + Coca-Cola>,
+    <Video: БРРРАЗИЛИЯ ОТВЕТИТ 07: Какая боль! Народ в шоке | Картавый футбол + Coca-Cola>,
+    ...]
