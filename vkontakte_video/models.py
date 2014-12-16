@@ -329,7 +329,7 @@ class Video(VideoAbstractModel):
 
     # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
     owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True)  # , related_name='videos'
-    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True)  # , related_name='videos'
+    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True, related_name='videos')
 
     like_users = models.ManyToManyField(User, related_name='like_videos')
 
