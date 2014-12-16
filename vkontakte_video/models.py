@@ -22,7 +22,38 @@ ALBUM_PRIVACY_CHOCIES = (
 )
 
 
-class VideoAlbumRemoteManager(VkontakteManager):
+class CountOffsetManagerMixin(VkontakteManager):
+
+    def fetch(self, count=100, offset=0, **kwargs):
+        if count > 100:
+            raise ValueError("Attribute 'count' can not be more than 100")
+
+        # count количество элементов, которое необходимо получить.
+        kwargs['count'] = int(count)
+
+        # offset смещение, необходимое для выборки определенного подмножества. По умолчанию — 0.
+        # положительное число
+        kwargs['offset'] = int(offset)
+
+        return super(CountOffsetManagerMixin, self).fetch(**kwargs)
+
+
+class AfterBeforeManagerMixin(VkontakteTimelineManager):
+
+    def fetch(self, before=None, after=None, **kwargs):
+        if before and not after:
+            raise ValueError("Attribute `before` should be specified with attribute `after`")
+        if before and before < after:
+            raise ValueError("Attribute `before` should be later, than attribute `after`")
+
+        # special parameters
+        kwargs['after'] = after
+        kwargs['before'] = before
+
+        return super(AfterBeforeManagerMixin, self).fetch(**kwargs)
+
+
+class VideoAlbumRemoteManager(CountOffsetManagerMixin):
 
     #timeline_force_ordering = True
 
@@ -30,23 +61,14 @@ class VideoAlbumRemoteManager(VkontakteManager):
         return instance.updated or instance.created or timezone.now()
 
     @transaction.commit_on_success
-    def fetch(self, user=None, group=None, offset=0, count=100, **kwargs):
+    def fetch(self, user=None, group=None, **kwargs):
         if not user and not group:
             raise ValueError("You must specify user of group, which albums you want to fetch")
-
-        kwargs = {}
 
         if user:
             kwargs.update({'owner_id': user.remote_id})
         elif group:
             kwargs.update({'owner_id': - 1 * group.remote_id})
-
-        # offset смещение, необходимое для выборки определенного подмножества. По умолчанию — 0.
-        # положительное число
-        kwargs['offset'] = int(offset)
-
-        # count количество альбомов, которое необходимо получить.
-        kwargs['count'] = int(count)
 
         kwargs['v'] = '5.27'
         kwargs['extended'] = 1
@@ -54,16 +76,12 @@ class VideoAlbumRemoteManager(VkontakteManager):
         return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
 
 
-class VideoRemoteManager(VkontakteTimelineManager):
+class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
     @transaction.commit_on_success
-    def fetch(self, video_album=None, user=None, group=None, ids=None, before=None, after=None, offset=0, count=100, **kwargs):
+    def fetch(self, video_album=None, user=None, group=None, ids=None, **kwargs):
         if not (video_album or user or group):
             raise ValueError("You must specify  or video album or user or group, which video you want to fetch")
-        if before and not after:
-            raise ValueError("Attribute `before` should be specified with attribute `after`")
-        if before and before < after:
-            raise ValueError("Attribute `before` should be later, than attribute `after`")
 
         if user:
             kwargs.update({'owner_id': user.remote_id})
@@ -94,17 +112,6 @@ class VideoRemoteManager(VkontakteTimelineManager):
                 videos.append(vid)
 
             kwargs['videos'] = ','.join(videos)
-
-        # offset смещение, необходимое для выборки определенного подмножества комментариев. По умолчанию — 0.
-        # положительное число
-        kwargs['offset'] = int(offset)
-
-        # count количество видеозаписей, которое необходимо получить.
-        kwargs['count'] = int(count)
-
-        # special parameters
-        kwargs['after'] = after
-        kwargs['before'] = before
 
         kwargs['v'] = '5.27'
         kwargs['extended'] = 1
@@ -163,26 +170,22 @@ class PhotoRemoteManager(VkontakteTimelineManager):
 '''
 
 
-class CommentRemoteManager(VkontakteTimelineManager):
+class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
     @transaction.commit_on_success
     @fetch_all(default_count=100)
-    def fetch_album(self, album, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
+    def fetch_album(self, album, sort='asc', need_likes=True, **kwargs):
         raise NotImplementedError
 
     @transaction.commit_on_success
     @fetch_all(default_count=100)
-    def fetch_by_video(self, video, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
-        if count > 100:
-            raise ValueError("Attribute 'count' can not be more than 100")
+    def fetch_by_video(self, video, sort='asc', need_likes=True, **kwargs):
         if sort not in ['asc', 'desc']:
             raise ValueError("Attribute 'sort' should be equal to 'asc' or 'desc'")
-        if sort == 'asc' and after:
-            raise ValueError("Attribute `sort` should be equal to 'desc' with defined `after` attribute")
-        if before and not after:
-            raise ValueError("Attribute `before` should be specified with attribute `after`")
-        if before and before < after:
-            raise ValueError("Attribute `before` should be later, than attribute `after`")
+
+        if 'after' in kwargs:
+            if kwargs['after'] and sort == 'asc':
+                raise ValueError("Attribute `sort` should be equal to 'desc' with defined `after` attribute")
 
         # owner_id идентификатор пользователя или сообщества, которому принадлежит фотография.
         # Обратите внимание, идентификатор сообщества в параметре owner_id необходимо указывать со знаком "-" — например, owner_id=-1 соответствует идентификатору сообщества ВКонтакте API (club1)
@@ -200,21 +203,9 @@ class CommentRemoteManager(VkontakteTimelineManager):
         # флаг, может принимать значения 1 или 0
         kwargs['need_likes'] = int(need_likes)
 
-        # offset смещение, необходимое для выборки определенного подмножества комментариев. По умолчанию — 0.
-        # положительное число
-        kwargs['offset'] = int(offset)
-
-        # count количество комментариев, которое необходимо получить.
-        # положительное число, по умолчанию 20, максимальное значение 100
-        kwargs['count'] = int(count)
-
         # sort порядок сортировки комментариев (asc — от старых к новым, desc - от новых к старым)
         # строка
         kwargs['sort'] = sort
-
-        # special parameters
-        kwargs['after'] = after
-        kwargs['before'] = before
 
         kwargs['extra_fields'] = {'video_id': video.pk}
         kwargs['v'] = '5.27'
