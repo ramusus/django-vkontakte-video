@@ -158,6 +158,10 @@ class VideoTest(TestCase):
         self.assertEqual(videos[0].group, group)
         self.assertEqual(videos[0].video_album, album)
 
+        # fetch by video_album parameter
+        videos = Video.remote.fetch(video_album=album, ids=[VIDEO_ID])
+        self.assertEqual(len(videos), 1)
+
     def test_parse_video(self):
 
         group = GroupFactory(remote_id=GROUP_ID)
