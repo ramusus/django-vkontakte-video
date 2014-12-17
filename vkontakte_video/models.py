@@ -99,7 +99,7 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
             kwargs['album_id'] = video_album.remote_id
             #kwargs['extra_fields'] = {'video_album_id': video_album.pk}
 
-        elif ids:
+        if ids:
             videos = []
             owner_id = kwargs['owner_id']
             for id in ids:
