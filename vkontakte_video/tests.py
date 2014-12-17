@@ -380,6 +380,11 @@ class OtherTests(TestCase):
         self.assertEqual(Comment.objects.count(), len(comments))
         self.assertEqual(comments[0].author, user)
 
+        # fetch user video likes
+        users = video.fetch_likes(all=True)
+        self.assertTrue(video.likes_count > 0)
+        self.assertEqual(video.likes_count, len(users))
+
         # fetch all user videos
         videos = Video.remote.fetch(user=user)
         self.assertGreater(len(videos), 0)
