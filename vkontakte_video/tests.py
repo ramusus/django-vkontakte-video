@@ -240,7 +240,7 @@ class CommentTest(TestCase):
         # testing `count` parameter, count is the same as limit
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group, owner=None)
+        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
 
         self.assertEqual(Comment.objects.count(), 0)
 
@@ -385,6 +385,21 @@ class OtherTests(TestCase):
         self.assertGreater(len(videos), 0)
         self.assertEqual(Video.objects.count(), len(videos))
         self.assertEqual(videos[0].owner, user)
+
+    def test_link(self):
+        group = GroupFactory(remote_id=GROUP_ID)
+        album = AlbumFactory(remote_id=ALBUM_ID, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+
+        self.assertEqual(album.link.count("-"), 1)
+        self.assertEqual(video.link.count("-"), 1)
+
+        user = UserFactory(remote_id=13312307)
+        album = AlbumFactory(remote_id=55976289, owner=user)
+        video = VideoFactory(remote_id=165144348, video_album=album, owner=user)
+
+        self.assertEqual(album.link.count("-"), 0)
+        self.assertEqual(video.link.count("-"), 0)
 
 
 class OldTests():
