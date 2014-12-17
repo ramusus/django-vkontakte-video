@@ -303,9 +303,9 @@ class VideoAlbum(VideoAbstractModel):
         if self.owner:
             owner_id = self.owner.remote_id
         else:
-            owner_id = self.group.remote_id
+            owner_id = -1 * self.group.remote_id
 
-        vk_link = 'https://vk.com/videos-%s?section=album_%s' % (owner_id, self.remote_id)
+        vk_link = 'https://vk.com/videos%s?section=album_%s' % (owner_id, self.remote_id)
         return vk_link
 
     def parse(self, response):
@@ -363,9 +363,9 @@ class Video(VideoAbstractModel):
         if self.owner:
             owner_id = self.owner.remote_id
         else:
-            owner_id = self.group.remote_id
+            owner_id = -1 * self.group.remote_id
 
-        vk_link = 'https://vk.com/video-%s_%s' % (owner_id, self.remote_id)
+        vk_link = 'https://vk.com/video%s_%s' % (owner_id, self.remote_id)
         return vk_link
 
     def parse(self, response):
