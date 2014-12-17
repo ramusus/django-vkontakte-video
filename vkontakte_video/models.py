@@ -68,13 +68,13 @@ class VideoAlbumRemoteManager(CountOffsetManagerMixin):
 
     @transaction.commit_on_success
     def fetch(self, user=None, group=None, **kwargs):
-        if not user and not group:
+        if not (user or group):
             raise ValueError("You must specify user of group, which albums you want to fetch")
 
         if user:
-            kwargs.update({'owner_id': user.remote_id})
+            kwargs['owner_id'] = user.remote_id
         elif group:
-            kwargs.update({'owner_id': - 1 * group.remote_id})
+            kwargs['owner_id'] = -1 * group.remote_id
 
         kwargs['v'] = '5.27'
         kwargs['extended'] = 1
@@ -90,29 +90,18 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
             raise ValueError("You must specify  or video album or user or group, which video you want to fetch")
 
         if user:
-            kwargs.update({'owner_id': user.remote_id})
+            kwargs['owner_id'] = user.remote_id
         elif group:
-            kwargs.update({'owner_id': - 1 * group.remote_id})
+            kwargs['owner_id'] = -1 * group.remote_id
 
         if video_album:
-            if video_album.group:
-                owner_id = -1 * video_album.group.remote_id  # 16297716 -> -16297716
-            else:
-                owner_id = video_album.owner.remote_id
-
-            kwargs['owner_id'] = owner_id
+            kwargs['owner_id'] = video_album.remote_owner_id
             kwargs['album_id'] = video_album.remote_id
             #kwargs['extra_fields'] = {'video_album_id': video_album.pk}
 
         elif ids:
-            del(kwargs['owner_id'])
-
-            if group:
-                owner_id = -1 * group.remote_id  # 16297716 -> -16297716
-            else:
-                owner_id = user.remote_id
-
             videos = []
+            owner_id = kwargs['owner_id']
             for id in ids:
                 vid = '%s_%s' % (owner_id, id)
                 videos.append(vid)
@@ -196,10 +185,8 @@ class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         # owner_id идентификатор пользователя или сообщества, которому принадлежит фотография.
         # Обратите внимание, идентификатор сообщества в параметре owner_id необходимо указывать со знаком "-" — например, owner_id=-1 соответствует идентификатору сообщества ВКонтакте API (club1)
         # int (числовое значение), по умолчанию идентификатор текущего пользователя
-        if video.owner:
-            kwargs['owner_id'] = video.owner.remote_id
-        elif video.group:
-            kwargs['owner_id'] = -1 * video.group.remote_id
+
+        kwargs['owner_id'] = video.remote_owner_id
 
         # video_id идентификатор видеозаписи.
         # int (числовое значение), обязательный параметр
@@ -256,6 +243,13 @@ class VideoAbstractModel(VkontakteModel):
         return '%s_%s' % (remote_id, id)
     """
 
+    @property
+    def remote_owner_id(self):
+        if self.owner:
+            return self.owner.remote_id
+        else:
+            return -1 * self.group.remote_id
+
     def parse(self, response):
         # TODO: перейти на ContentType и избавиться от метода
         owner_id = int(response.pop('owner_id'))
@@ -300,13 +294,7 @@ class VideoAlbum(VideoAbstractModel):
 
     @property
     def link(self):
-        if self.owner:
-            owner_id = self.owner.remote_id
-        else:
-            owner_id = -1 * self.group.remote_id
-
-        vk_link = 'https://vk.com/videos%s?section=album_%s' % (owner_id, self.remote_id)
-        return vk_link
+        return 'https://vk.com/videos%s?section=album_%s' % (self.remote_owner_id, self.remote_id)
 
     def parse(self, response):
         super(VideoAlbum, self).parse(response)
@@ -360,13 +348,7 @@ class Video(VideoAbstractModel):
 
     @property
     def link(self):
-        if self.owner:
-            owner_id = self.owner.remote_id
-        else:
-            owner_id = -1 * self.group.remote_id
-
-        vk_link = 'https://vk.com/video%s_%s' % (owner_id, self.remote_id)
-        return vk_link
+        return 'https://vk.com/video%s_%s' % (self.remote_owner_id, self.remote_id)
 
     def parse(self, response):
         super(Video, self).parse(response)
@@ -384,9 +366,7 @@ class Video(VideoAbstractModel):
 #        kwargs['offset'] = int(kwargs.pop('offset', 0))
         kwargs['likes_type'] = 'video'
         kwargs['item_id'] = self.remote_id
-        kwargs['owner_id'] = self.group.remote_id
-        if isinstance(self.group, Group):
-            kwargs['owner_id'] *= -1
+        kwargs['owner_id'] = self.remote_owner_id
 
         log.debug('Fetching likes of %s %s of owner "%s"' % (self._meta.module_name, self.remote_id, self.group))
 
