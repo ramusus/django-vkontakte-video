@@ -24,7 +24,7 @@ ALBUM_PRIVACY_CHOCIES = (
 '''
 
 
-class VideoAlbumRemoteManager(CountOffsetManagerMixin):
+class AlbumRemoteManager(CountOffsetManagerMixin):
 
     #timeline_force_ordering = True
 
@@ -43,14 +43,14 @@ class VideoAlbumRemoteManager(CountOffsetManagerMixin):
 
         kwargs['extended'] = 1
 
-        return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
+        return super(AlbumRemoteManager, self).fetch(**kwargs)
 
 
 class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
     @transaction.commit_on_success
-    def fetch(self, video_album=None, user=None, group=None, ids=None, **kwargs):
-        if not (video_album or user or group):
+    def fetch(self, album=None, user=None, group=None, ids=None, **kwargs):
+        if not (album or user or group):
             raise ValueError("You must specify  or video album or user or group, which video you want to fetch")
 
         if user:
@@ -58,10 +58,10 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         elif group:
             kwargs['owner_id'] = -1 * group.remote_id
 
-        if video_album:
-            kwargs['owner_id'] = video_album.remote_owner_id
-            kwargs['album_id'] = video_album.remote_id
-            #kwargs['extra_fields'] = {'video_album_id': video_album.pk}
+        if album:
+            kwargs['owner_id'] = album.remote_owner_id
+            kwargs['album_id'] = album.remote_id
+            #kwargs['extra_fields'] = {'album_id': album.pk}
 
         if ids:
             videos = []
@@ -143,7 +143,7 @@ class VideoAbstractModel(VkontaktePKModel):
 
 
 @python_2_unicode_compatible
-class VideoAlbum(VideoAbstractModel):
+class Album(VideoAbstractModel):
 
     #slug_prefix = 'album'
 
@@ -158,7 +158,7 @@ class VideoAlbum(VideoAbstractModel):
     title = models.CharField(max_length='200')
 
     objects = models.Manager()
-    remote = VideoAlbumRemoteManager(remote_pk=('remote_id',), version=5.27, methods={
+    remote = AlbumRemoteManager(remote_pk=('remote_id',), version=5.27, methods={
         'get': 'getAlbums',
     })
 
@@ -175,18 +175,18 @@ class VideoAlbum(VideoAbstractModel):
         return 'https://vk.com/videos%s?section=album_%s' % (self.remote_owner_id, self.remote_id)
 
     def parse(self, response):
-        super(VideoAlbum, self).parse(response)
+        super(Album, self).parse(response)
         self.videos_count = response['count']
 
     @transaction.commit_on_success
     def fetch_videos(self, *args, **kwargs):
-        return Video.remote.fetch(video_album=self, *args, **kwargs)
+        return Video.remote.fetch(album=self, *args, **kwargs)
 
 
 @python_2_unicode_compatible
 class Video(VideoAbstractModel):
 
-    video_album = models.ForeignKey(VideoAlbum, null=True, related_name='videos')
+    album = models.ForeignKey(Album, null=True, related_name='videos')
 
     # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
     owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True)  # , related_name='videos'
@@ -230,7 +230,7 @@ class Video(VideoAbstractModel):
         super(Video, self).parse(response)
         self.comments_count = response['comments']
         self.views_count = response['views']
-        self.video_album_id = response.get('album_id', None)
+        self.album_id = response.get('album_id', None)
 
     @transaction.commit_on_success
     def fetch_comments(self, *args, **kwargs):

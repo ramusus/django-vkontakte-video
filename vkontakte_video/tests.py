@@ -8,7 +8,7 @@ from vkontakte_groups.factories import GroupFactory
 from vkontakte_users.factories import UserFactory, User
 
 from factories import AlbumFactory, VideoFactory
-from models import VideoAlbum, Video, Comment
+from models import Album, Video, Comment
 #from datetime import datetime
 #import mock
 GROUP_ID = 16297716  # https://vk.com/cocacola
@@ -21,36 +21,36 @@ VIDEO_CRUD_ID = 170947024
 #USER_AUTHOR_ID = 201164356
 
 
-class VideoAlbumTest(TestCase):
+class AlbumTest(TestCase):
 
     def test_fetch_group_albums(self):
 
         group = GroupFactory(remote_id=GROUP_ID)
 
-        self.assertEqual(VideoAlbum.objects.count(), 0)
+        self.assertEqual(Album.objects.count(), 0)
 
-        albums = VideoAlbum.remote.fetch(group=group)
+        albums = Album.remote.fetch(group=group)
 
         self.assertTrue(len(albums) > 0)
-        self.assertEqual(VideoAlbum.objects.count(), len(albums))
+        self.assertEqual(Album.objects.count(), len(albums))
         self.assertEqual(albums[0].group, group)
 
     def test_fetch_with_count_and_offset(self):
         # testing `count` parameter, count is the same as limit
         group = GroupFactory(remote_id=GROUP_ID)
 
-        self.assertEqual(VideoAlbum.objects.count(), 0)
+        self.assertEqual(Album.objects.count(), 0)
 
-        albums = VideoAlbum.remote.fetch(group=group, count=5)
+        albums = Album.remote.fetch(group=group, count=5)
 
         self.assertEqual(len(albums), 5)
-        self.assertEqual(VideoAlbum.objects.count(), 5)
+        self.assertEqual(Album.objects.count(), 5)
 
         # testing `offset` parameter
-        albums2 = VideoAlbum.remote.fetch(group=group, count=2, offset=4)
+        albums2 = Album.remote.fetch(group=group, count=2, offset=4)
 
         self.assertEqual(len(albums2), 2)
-        self.assertEqual(VideoAlbum.objects.count(), 6)
+        self.assertEqual(Album.objects.count(), 6)
 
         self.assertEqual(albums[4].remote_id, albums2[0].remote_id)
 
@@ -61,7 +61,7 @@ class VideoAlbumTest(TestCase):
         d = {u'count': 16, u'photo_320': u'http://cs619722.vk.me/u8704019/video/l_6369beb6.jpg', u'title': u'Coca-Cola Football',
              u'photo_160': u'http://cs619722.vk.me/u8704019/video/m_ef3493e1.jpg', u'id': 54387280, u'owner_id': -16297716}
 
-        instance = VideoAlbum()
+        instance = Album()
         instance.parse(d)
         instance.save()
 
@@ -80,8 +80,8 @@ class VideoTest(TestCase):
         group = GroupFactory(remote_id=GROUP_ID)
         #album = AlbumFactory(remote_id=ALBUM_ID, group=group)
 
-        albums = VideoAlbum.remote.fetch(group=group)   # have to fetch for album.videos_count
-        album = VideoAlbum.objects.get(remote_id=ALBUM_ID)
+        albums = Album.remote.fetch(group=group)   # have to fetch for album.videos_count
+        album = Album.objects.get(remote_id=ALBUM_ID)
 
         self.assertEqual(Video.objects.count(), 0)
 
@@ -91,7 +91,7 @@ class VideoTest(TestCase):
         self.assertEqual(album.videos_count, len(videos))
         self.assertEqual(Video.objects.count(), len(videos))
         self.assertEqual(videos[0].group, group)
-        self.assertEqual(videos[0].video_album, album)
+        self.assertEqual(videos[0].album, album)
         #self.assertTrue(videos[0].likes_count > 0)
         self.assertTrue(videos[0].comments_count > 0)
 
@@ -156,10 +156,10 @@ class VideoTest(TestCase):
         #self.assertEqual(album.videos_count, 1)
         self.assertEqual(Video.objects.count(), 1)
         self.assertEqual(videos[0].group, group)
-        self.assertEqual(videos[0].video_album, album)
+        self.assertEqual(videos[0].album, album)
 
-        # fetch by video_album parameter
-        videos = Video.remote.fetch(video_album=album, ids=[VIDEO_ID])
+        # fetch by album parameter
+        videos = Video.remote.fetch(album=album, ids=[VIDEO_ID])
         self.assertEqual(len(videos), 1)
 
     def test_parse_video(self):
@@ -180,7 +180,7 @@ class VideoTest(TestCase):
         instance.parse(d)
         instance.save()
 
-        self.assertEqual(instance.video_album, album)
+        self.assertEqual(instance.album, album)
         self.assertEqual(instance.group, group)
 
         self.assertEqual(instance.remote_id, d['id'])
@@ -244,7 +244,7 @@ class CommentTest(TestCase):
         # testing `count` parameter, count is the same as limit
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, album=album, group=group)
 
         self.assertEqual(Comment.objects.count(), 0)
 
@@ -266,7 +266,7 @@ class CommentTest(TestCase):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, album=album, group=group)
 
         self.assertEqual(video.likes_count, 0)
         users_initial = User.objects.count()
@@ -281,7 +281,7 @@ class CommentTest(TestCase):
     def test_comment_crud_methods(self):
         group = GroupFactory(remote_id=GROUP_CRUD_ID)
         album = AlbumFactory(remote_id=ALBUM_CRUD_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_CRUD_ID, video_album=album, group=group)
+        video = VideoFactory(remote_id=VIDEO_CRUD_ID, album=album, group=group)
 
         def assert_local_equal_to_remote(comment):
             comment_remote = Comment.remote.fetch_by_video(video=comment.video).get(remote_id=comment.remote_id)
@@ -346,7 +346,7 @@ class CommentTest(TestCase):
 
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, album=album, group=group)
 
         instance = Comment(video=video)
         instance.parse(json.loads(response))
@@ -365,13 +365,13 @@ class OtherTests(TestCase):
         user = UserFactory(remote_id=13312307)
 
         # fetch albums
-        video_albums = VideoAlbum.remote.fetch(user=user)
-        self.assertGreater(len(video_albums), 0)
-        self.assertEqual(VideoAlbum.objects.count(), len(video_albums))
-        self.assertEqual(video_albums[0].owner, user)
+        albums = Album.remote.fetch(user=user)
+        self.assertGreater(len(albums), 0)
+        self.assertEqual(Album.objects.count(), len(albums))
+        self.assertEqual(albums[0].owner, user)
 
         # fetch album videos
-        album = video_albums[0]
+        album = albums[0]
         videos = album.fetch_videos()
         self.assertGreater(len(videos), 0)
         self.assertEqual(Video.objects.count(), len(videos))
@@ -398,14 +398,14 @@ class OtherTests(TestCase):
     def test_link(self):
         group = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, group=group)
-        video = VideoFactory(remote_id=VIDEO_ID, video_album=album, group=group)
+        video = VideoFactory(remote_id=VIDEO_ID, album=album, group=group)
 
         self.assertEqual(album.link.count("-"), 1)
         self.assertEqual(video.link.count("-"), 1)
 
         user = UserFactory(remote_id=13312307)
         album = AlbumFactory(remote_id=55976289, owner=user)
-        video = VideoFactory(remote_id=165144348, video_album=album, owner=user)
+        video = VideoFactory(remote_id=165144348, album=album, owner=user)
 
         self.assertEqual(album.link.count("-"), 0)
         self.assertEqual(video.link.count("-"), 0)
