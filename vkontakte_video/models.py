@@ -14,13 +14,14 @@ from vkontakte_groups.models import Group
 from vkontakte_users.models import User
 #import signals
 log = logging.getLogger('vkontakte_video')
-
+'''
 ALBUM_PRIVACY_CHOCIES = (
     (0, u'Все пользователи'),
     (1, u'Только друзья'),
     (2, u'Друзья и друзья друзей'),
     (3, u'Только я')
 )
+'''
 
 
 class VideoAlbumRemoteManager(CountOffsetManagerMixin):
@@ -76,57 +77,6 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         return super(VideoRemoteManager, self).fetch(**kwargs)
 
 
-'''
-class PhotoRemoteManager(VkontakteTimelineManager):
-
-    timeline_cut_fieldname = 'created'
-    timeline_force_ordering = True
-
-    @transaction.commit_on_success
-    def fetch(self, album, ids=None, limit=None, extended=False, offset=0, photo_sizes=False, before=None, rev=0, after=None, **kwargs):
-        if ids and not isinstance(ids, (tuple, list)):
-            raise ValueError("Attribute 'ids' should be tuple or list")
-        if before and not after:
-            raise ValueError("Attribute `before` should be specified with attribute `after`")
-        if before and before < after:
-            raise ValueError("Attribute `before` should be later, than attribute `after`")
-        # TODO: it seems rev attribute make no sence for order of response
-        if rev == 1 and (after or before):
-            raise ValueError("Attribute `rev` should be equal to 0 with defined `after` attribute")
-
-        kwargs = {
-            'album_id': album.remote_id.split('_')[1],
-            'extended': int(extended),
-            'offset': int(offset),
-            # photo_sizes
-            # 1 - позволяет получать все размеры фотографий.
-            'photo_sizes': int(photo_sizes),
-        }
-        if album.owner:
-            kwargs.update({'uid': album.owner.remote_id})
-        elif album.group:
-            kwargs.update({'gid': album.group.remote_id})
-        if ids:
-            kwargs.update({'photo_ids': ','.join(map(str, ids))})
-        if limit:
-            kwargs.update({'limit': limit})
-
-        kwargs['rev'] = int(rev)
-
-        # special parameters
-        kwargs['after'] = after
-        kwargs['before'] = before
-
-        # TODO: добавить поля
-        # feed
-        # Unixtime, который может быть получен методом newsfeed.get в поле date, для получения всех фотографий загруженных пользователем в определённый день либо на которых пользователь был отмечен. Также нужно указать параметр uid пользователя, с которым произошло событие.
-        # feed_type
-        # Тип новости получаемый в поле type метода newsfeed.get, для получения только загруженных пользователем фотографий, либо только фотографий, на которых он был отмечен. Может принимать значения photo, photo_tag.
-
-        return super(PhotoRemoteManager, self).fetch(**kwargs)
-'''
-
-
 class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
     @transaction.commit_on_success
@@ -164,14 +114,7 @@ class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
         kwargs['extra_fields'] = {'video_id': video.pk}
 
-#        try:
         return super(CommentRemoteManager, self).fetch(**kwargs)
-#         except VkontakteError, e:
-#             if e.code == 100 and 'invalid tid' in e.description:
-#                 log.error("Impossible to fetch comments for unexisted topic ID=%s" % topic.remote_id)
-#                 return self.model.objects.none()
-#             else:
-#                 raise e
 
 
 class VideoAbstractModel(VkontaktePKModel):
@@ -180,28 +123,6 @@ class VideoAbstractModel(VkontaktePKModel):
 
     class Meta:
         abstract = True
-
-    """
-    @property
-    def slug(self):
-        return self.slug_prefix + str(self.remote_id)
-
-    @property
-    def remote_id_short(self):
-        return self.remote_id.split('_')[1]
-
-    def get_remote_id(self, id):
-        '''
-        Returns unique remote_id, contains from 2 parts: remote_id of owner or group and remote_id of photo object
-        TODO: перейти на ContentType и избавиться от метода
-        '''
-        if self.owner:
-            remote_id = self.owner.remote_id
-        elif self.group:
-            remote_id = -1 * self.group.remote_id
-
-        return '%s_%s' % (remote_id, id)
-    """
 
     @property
     def remote_owner_id(self):
@@ -224,7 +145,6 @@ class VideoAbstractModel(VkontaktePKModel):
 @python_2_unicode_compatible
 class VideoAlbum(VideoAbstractModel):
 
-    #remote_pk_field = 'album_id'
     #slug_prefix = 'album'
 
     # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
@@ -265,8 +185,6 @@ class VideoAlbum(VideoAbstractModel):
 
 @python_2_unicode_compatible
 class Video(VideoAbstractModel):
-    #methods_namespace = 'video'
-    #remote_pk_field = 'vid'
 
     video_album = models.ForeignKey(VideoAlbum, null=True, related_name='videos')
 
@@ -335,127 +253,6 @@ class Video(VideoAbstractModel):
         self.save()
 
         return users
-
-
-"""
-class Photo(PhotosAbstractModel):
-
-    remote_pk_field = 'pid'
-    slug_prefix = 'photo'
-
-    album = models.ForeignKey(Album, verbose_name=u'Альбом', related_name='photos')
-
-    # TODO: switch to ContentType, remove owner and group foreignkeys
-    owner = models.ForeignKey(User, verbose_name=u'Владелец фотографии', null=True, related_name='photos')
-    group = models.ForeignKey(Group, verbose_name=u'Группа фотографии', null=True, related_name='photos')
-
-    user = models.ForeignKey(User, verbose_name=u'Автор фотографии', null=True, related_name='photos_author')
-
-    src = models.CharField(u'Иконка', max_length='200')
-    src_big = models.CharField(u'Большая', max_length='200')
-    src_small = models.CharField(u'Маленькая', max_length='200')
-    src_xbig = models.CharField(u'Большая X', max_length='200')
-    src_xxbig = models.CharField(u'Большая XX', max_length='200')
-
-    width = models.PositiveIntegerField(null=True)
-    height = models.PositiveIntegerField(null=True)
-
-    likes_count = models.PositiveIntegerField(u'Лайков', default=0)
-    comments_count = models.PositiveIntegerField(u'Комментариев', default=0)
-    actions_count = models.PositiveIntegerField(u'Комментариев', default=0)
-    tags_count = models.PositiveIntegerField(u'Тегов', default=0)
-
-    like_users = models.ManyToManyField(User, related_name='like_photos')
-
-    text = models.TextField()
-
-    created = models.DateTimeField(db_index=True)
-
-    objects = models.Manager()
-    remote = PhotoRemoteManager(remote_pk=('remote_id',), methods={
-        'get': 'get',
-    })
-
-    class Meta:
-        verbose_name = u'Фотография Вконтакте'
-        verbose_name_plural = u'Фотографии Вконтакте'
-
-    def parse(self, response):
-        super(Photo, self).parse(response)
-
-        # counters
-        for field_name in ['likes', 'comments', 'tags']:
-            if field_name in response and 'count' in response[field_name]:
-                setattr(self, '%s_count' % field_name, response[field_name]['count'])
-
-        self.actions_count = self.likes_count + self.comments_count
-
-        if 'user_id' in response:
-            self.user = User.objects.get_or_create(remote_id=response['user_id'])[0]
-
-        try:
-            self.album = Album.objects.get(remote_id=self.get_remote_id(response['aid']))
-        except Album.DoesNotExist:
-            raise Exception('Impossible to save photo for unexisted album %s' % (self.get_remote_id(response['aid']),))
-
-    def fetch_comments_parser(self):
-        '''
-        Fetch total ammount of comments
-        TODO: implement fetching comments
-        '''
-        post_data = {
-            'act': 'photo_comments',
-            'al': 1,
-            'offset': 0,
-            'photo': self.remote_id,
-        }
-        parser = VkontaktePhotosParser().request('/al_photos.php', data=post_data)
-
-        self.comments_count = len(parser.content_bs.findAll('div', {'class': 'clear_fix pv_comment '}))
-        self.save()
-
-    def fetch_likes_parser(self):
-        '''
-        Fetch total ammount of likes
-        TODO: implement fetching users who likes
-        '''
-        post_data = {
-            'act': 'a_get_stats',
-            'al': 1,
-            'list': 'album%s' % self.album.remote_id,
-            'object': 'photo%s' % self.remote_id,
-        }
-        parser = VkontaktePhotosParser().request('/like.php', data=post_data)
-
-        values = re.findall(r'value="(\d+)"', parser.html)
-        if len(values):
-            self.likes_count = int(values[0])
-            self.save()
-
-    @transaction.commit_on_success
-    def fetch_likes(self, *args, **kwargs):
-
-#        kwargs['offset'] = int(kwargs.pop('offset', 0))
-        kwargs['likes_type'] = 'photo'
-        kwargs['item_id'] = self.remote_id.split('_')[1]
-        kwargs['owner_id'] = self.group.remote_id
-        if isinstance(self.group, Group):
-            kwargs['owner_id'] *= -1
-
-        log.debug('Fetching likes of %s %s of owner "%s"' % (self._meta.module_name, self.remote_id, self.group))
-
-        users = User.remote.fetch_instance_likes(self, *args, **kwargs)
-
-        # update self.likes
-        self.likes_count = self.like_users.count()
-        self.save()
-
-        return users
-
-    @transaction.commit_on_success
-    def fetch_comments(self, *args, **kwargs):
-        return Comment.remote.fetch_photo(photo=self, *args, **kwargs)
-"""
 
 
 class Comment(VkontakteModel, VkontakteCRUDModel):

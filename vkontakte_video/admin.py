@@ -38,12 +38,6 @@ class VideoAdmin(VkontakteModelAdmin):
         return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.link, obj.photo_130)
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
-    '''
-    def text_with_link(self, obj):
-        return u'%s <a href="%s"><strong>ссылка</strong></a>' % (obj.title, )
-    text_with_link.short_description = u'Текст'
-    text_with_link.allow_tags = True
-    '''
 
     list_display = ('image_preview', 'remote_id', 'title', 'video_album', 'comments_count', 'views_count', 'date')
     list_display_links = ('remote_id', 'title')
