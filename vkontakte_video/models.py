@@ -76,7 +76,6 @@ class VideoAlbumRemoteManager(CountOffsetManagerMixin):
         elif group:
             kwargs['owner_id'] = -1 * group.remote_id
 
-        kwargs['v'] = '5.27'
         kwargs['extended'] = 1
 
         return super(VideoAlbumRemoteManager, self).fetch(**kwargs)
@@ -108,7 +107,6 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
             kwargs['videos'] = ','.join(videos)
 
-        kwargs['v'] = '5.27'
         kwargs['extended'] = 1
 
         return super(VideoRemoteManager, self).fetch(**kwargs)
@@ -201,7 +199,7 @@ class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         kwargs['sort'] = sort
 
         kwargs['extra_fields'] = {'video_id': video.pk}
-        kwargs['v'] = '5.27'
+
 #        try:
         return super(CommentRemoteManager, self).fetch(**kwargs)
 #         except VkontakteError, e:
@@ -280,7 +278,7 @@ class VideoAlbum(VideoAbstractModel):
     title = models.CharField(max_length='200')
 
     objects = models.Manager()
-    remote = VideoAlbumRemoteManager(remote_pk=('remote_id',), methods={
+    remote = VideoAlbumRemoteManager(remote_pk=('remote_id',), version=5.27, methods={
         'get': 'getAlbums',
     })
 
@@ -334,7 +332,7 @@ class Video(VideoAbstractModel):
     date = models.DateTimeField(help_text=u'Дата создания', db_index=True)
 
     objects = models.Manager()
-    remote = VideoRemoteManager(remote_pk=('remote_id',), methods={
+    remote = VideoRemoteManager(remote_pk=('remote_id',), version=5.27, methods={
         'get': 'get',
     })
 
@@ -526,7 +524,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
 #    likes = models.PositiveIntegerField(u'Кол-во лайков', default=0)
 
     objects = models.Manager()
-    remote = CommentRemoteManager(remote_pk=('remote_id',), methods={
+    remote = CommentRemoteManager(remote_pk=('remote_id',), version=5.27, methods={
         'get': 'getComments',
         'create': 'createComment',
         'update': 'editComment',
