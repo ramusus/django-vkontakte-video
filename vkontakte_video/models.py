@@ -9,7 +9,7 @@ import re
 
 from vkontakte_api.decorators import fetch_all
 from vkontakte_api.models import VkontakteManager, VkontakteTimelineManager, \
-    VkontakteModel, VkontakteCRUDModel, CountOffsetManagerMixin, AfterBeforeManagerMixin
+    VkontakteModel, VkontaktePKModel, VkontakteCRUDModel, CountOffsetManagerMixin, AfterBeforeManagerMixin
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
 #import signals
@@ -174,11 +174,9 @@ class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 #                 raise e
 
 
-class VideoAbstractModel(VkontakteModel):
+class VideoAbstractModel(VkontaktePKModel):
 
     methods_namespace = 'video'
-
-    remote_id = models.BigIntegerField(u'ID', primary_key=True, help_text=u'Уникальный идентификатор', unique=True)
 
     class Meta:
         abstract = True
@@ -221,8 +219,6 @@ class VideoAbstractModel(VkontakteModel):
             self.group = Group.objects.get_or_create(remote_id=abs(owner_id))[0]
 
         super(VideoAbstractModel, self).parse(response)
-
-        #self.remote_id = self.get_remote_id(self.remote_id)
 
 
 @python_2_unicode_compatible
