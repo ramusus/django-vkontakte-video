@@ -9,7 +9,8 @@ import re
 
 from vkontakte_api.decorators import fetch_all
 from vkontakte_api.models import VkontakteManager, VkontakteTimelineManager, \
-    VkontakteModel, VkontaktePKModel, VkontakteCRUDModel, CountOffsetManagerMixin, AfterBeforeManagerMixin
+    VkontakteModel, VkontaktePKModel, VkontakteCRUDModel, \
+    CountOffsetManagerMixin, AfterBeforeManagerMixin, OwnerableModelMixin
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
 #import signals
@@ -32,14 +33,14 @@ class AlbumRemoteManager(CountOffsetManagerMixin):
         return instance.updated or instance.created or timezone.now()
 
     @transaction.commit_on_success
-    def fetch(self, user=None, group=None, **kwargs):
-        if not (user or group):
-            raise ValueError("You must specify user of group, which albums you want to fetch")
+    def fetch(self, owner=None, **kwargs):
+        if not owner:
+            raise ValueError("You must specify owner, which albums you want to fetch")
 
-        if user:
-            kwargs['owner_id'] = user.remote_id
-        elif group:
-            kwargs['owner_id'] = -1 * group.remote_id
+        if owner._meta.model_name == 'user':
+            kwargs['owner_id'] = owner.remote_id
+        else:
+            kwargs['owner_id'] = -1 * owner.remote_id
 
         kwargs['extended'] = 1
 
@@ -49,14 +50,15 @@ class AlbumRemoteManager(CountOffsetManagerMixin):
 class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
     @transaction.commit_on_success
-    def fetch(self, album=None, user=None, group=None, ids=None, **kwargs):
-        if not (album or user or group):
-            raise ValueError("You must specify  or video album or user or group, which video you want to fetch")
+    def fetch(self, album=None, owner=None, ids=None, **kwargs):
+        if not (album or owner):
+            raise ValueError("You must specify or video album or owner, which video you want to fetch")
 
-        if user:
-            kwargs['owner_id'] = user.remote_id
-        elif group:
-            kwargs['owner_id'] = -1 * group.remote_id
+        if owner:
+            if owner._meta.model_name == 'user':
+                kwargs['owner_id'] = owner.remote_id
+            else:
+                kwargs['owner_id'] = -1 * owner.remote_id
 
         if album:
             kwargs['owner_id'] = album.remote_owner_id
@@ -117,28 +119,14 @@ class CommentRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         return super(CommentRemoteManager, self).fetch(**kwargs)
 
 
-class VideoAbstractModel(VkontaktePKModel):
+class VideoAbstractModel(OwnerableModelMixin, VkontaktePKModel):
 
     methods_namespace = 'video'
 
     class Meta:
         abstract = True
 
-    @property
-    def remote_owner_id(self):
-        if self.owner:
-            return self.owner.remote_id
-        else:
-            return -1 * self.group.remote_id
-
     def parse(self, response):
-        # TODO: перейти на ContentType и избавиться от метода
-        owner_id = int(response.pop('owner_id'))
-        if owner_id > 0:
-            self.owner = User.objects.get_or_create(remote_id=owner_id)[0]
-        else:
-            self.group = Group.objects.get_or_create(remote_id=abs(owner_id))[0]
-
         super(VideoAbstractModel, self).parse(response)
 
 
@@ -146,10 +134,6 @@ class VideoAbstractModel(VkontaktePKModel):
 class Album(VideoAbstractModel):
 
     #slug_prefix = 'album'
-
-    # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
-    owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True, related_name='video_albums')
-    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True, related_name='video_albums')
 
     photo_160 = models.URLField(max_length=255, default='')
 
@@ -188,10 +172,6 @@ class Video(VideoAbstractModel):
 
     album = models.ForeignKey(Album, null=True, related_name='videos')
 
-    # TODO: migrate to ContentType framework, remove vkontakte_users and vkontakte_groups dependencies
-    owner = models.ForeignKey(User, verbose_name=u'Владелец альбома', null=True)  # , related_name='videos'
-    group = models.ForeignKey(Group, verbose_name=u'Группа альбома', null=True, related_name='videos')
-
     like_users = models.ManyToManyField(User, related_name='like_videos')
 
     title = models.CharField(max_length=255)
@@ -219,6 +199,10 @@ class Video(VideoAbstractModel):
         verbose_name = u'Видеозапись Вконтакте'
         verbose_name_plural = u'Видеозаписи Вконтакте'
 
+    def __init__(self, *args, **kwargs):
+        super(Video, self).__init__(*args, **kwargs)
+        self.owner_related_name = 'videos'
+
     def __str__(self):
         return self.title
 
@@ -244,7 +228,7 @@ class Video(VideoAbstractModel):
         kwargs['item_id'] = self.remote_id
         kwargs['owner_id'] = self.remote_owner_id
 
-        log.debug('Fetching likes of %s %s of owner "%s"' % (self._meta.module_name, self.remote_id, self.group))
+        log.debug('Fetching likes of %s %s of owner "%s"' % (self._meta.module_name, self.remote_id, self.owner))
 
         users = User.remote.fetch_instance_likes(self, *args, **kwargs)
 
@@ -296,17 +280,25 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
     @property
     def remote_owner_id(self):
         # return self.photo.remote_id.split('_')[0]
-        if self.video.owner:
-            return self.video.owner.remote_id
+
+        if self.video.owner_content_type.model == 'user':
+            return self.video.owner_id
         else:
-            return -1 * self.video.group.remote_id
+            return -1 * self.video.owner_id
+
+        '''
+        if self.author_content_type.model == 'user':
+            return self.author_id
+        else:
+            return -1 * self.author_id
+        '''
 
     @property
     def remote_id_short(self):
         return self.remote_id.split('_')[1]
 
     def prepare_create_params(self, from_group=False, **kwargs):
-        if self.author == self.video.group:
+        if self.author == self.video.owner and self.author_content_type.model == 'group':
             from_group = True
         kwargs.update({
             'owner_id': self.remote_owner_id,
@@ -351,7 +343,7 @@ class Comment(VkontakteModel, VkontakteCRUDModel):
     def parse(self, response):
         # undocummented feature of API. if from_id == 101 -> comment by group
         if response['from_id'] == 101:
-            self.author = self.video.group
+            self.author = self.video.owner
         else:
             self.author = self.get_or_create_group_or_user(response.pop('from_id'))[0]
 

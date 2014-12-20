@@ -12,10 +12,6 @@ class AlbumFactory(factory.DjangoModelFactory):
 
     remote_id = factory.LazyAttributeSequence(lambda o, n: n)
 
-    # should not be setting together
-    #owner = factory.SubFactory(UserFactory)
-    #group = factory.SubFactory(GroupFactory)
-
     videos_count = 0
 
     class Meta:
@@ -26,11 +22,6 @@ class VideoFactory(factory.DjangoModelFactory):
 
     remote_id = factory.LazyAttributeSequence(lambda o, n: n)
     album = factory.SubFactory(AlbumFactory)
-
-    # owner = factory.SubFactory(UserFactory) # setting this may coz errors in fetch method
-    # group = factory.SubFactory(GroupFactory) # setting this may coz errors in fetch method
-    owner = None
-    group = None
 
     duration = 0
 
