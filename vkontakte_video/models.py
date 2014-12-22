@@ -8,10 +8,11 @@ import logging
 import re
 
 from vkontakte_api.decorators import fetch_all
+from vkontakte_api.mixins import CountOffsetManagerMixin, AfterBeforeManagerMixin, OwnerableModelMixin
 from vkontakte_api.models import VkontakteManager, VkontakteTimelineManager, \
-    VkontakteModel, VkontaktePKModel, VkontakteCRUDModel, \
-    CountOffsetManagerMixin, AfterBeforeManagerMixin, OwnerableModelMixin
+    VkontakteModel, VkontaktePKModel, VkontakteCRUDModel
 from vkontakte_groups.models import Group
+
 from vkontakte_users.models import User
 #import signals
 log = logging.getLogger('vkontakte_video')
