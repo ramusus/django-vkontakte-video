@@ -167,10 +167,6 @@ class Video(VideoAbstractModel):
         verbose_name = u'Видеозапись Вконтакте'
         verbose_name_plural = u'Видеозаписи Вконтакте'
 
-    def __init__(self, *args, **kwargs):
-        super(Video, self).__init__(*args, **kwargs)
-        self.owner_related_name = 'videos'
-
     def __str__(self):
         return self.title
 
