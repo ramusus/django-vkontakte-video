@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.core.urlresolvers import reverse
 from vkontakte_api.admin import VkontakteModelAdmin
-from models import Album, Video, Comment
+from models import Album, Video
 
 
 class VideoInline(admin.TabularInline):
@@ -43,12 +43,5 @@ class VideoAdmin(VkontakteModelAdmin):
     list_display_links = ('remote_id', 'title')
     list_filter = ('album',)
 
-
-class CommentAdmin(VkontakteModelAdmin):
-    list_display = ('remote_id', 'video', 'author_id', 'text', 'date')
-    list_filter = ('video',)
-
-
 admin.site.register(Album, AlbumAdmin)
 admin.site.register(Video, VideoAdmin)
-admin.site.register(Comment, CommentAdmin)
