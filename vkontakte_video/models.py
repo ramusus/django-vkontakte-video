@@ -81,20 +81,10 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         return super(VideoRemoteManager, self).fetch(**kwargs)
 
 
-class VideoAbstractModel(OwnerableModelMixin, VkontaktePKModel):
+@python_2_unicode_compatible
+class Album(OwnerableModelMixin, VkontaktePKModel):
 
     methods_namespace = 'video'
-
-    class Meta:
-        abstract = True
-
-    def parse(self, response):
-        super(VideoAbstractModel, self).parse(response)
-
-
-@python_2_unicode_compatible
-class Album(VideoAbstractModel):
-
     #slug_prefix = 'album'
 
     photo_160 = models.URLField(max_length=255, default='')
@@ -130,7 +120,9 @@ class Album(VideoAbstractModel):
 
 
 @python_2_unicode_compatible
-class Video(VideoAbstractModel):
+class Video(OwnerableModelMixin, VkontaktePKModel):
+
+    methods_namespace = 'video'
 
     album = models.ForeignKey(Album, null=True, related_name='videos')
 
