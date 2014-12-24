@@ -142,10 +142,9 @@ class VideoTest(TestCase):
         self.assertEqual(len(videos2), 2)
         self.assertEqual(Video.objects.count(), 6)
 
-        # TODO: to fix
-        print videos[4].remote_id
-        print videos2[0].remote_id
-        print videos2[1].remote_id
+        # print videos[4].remote_id
+        # print videos2[0].remote_id
+        # print videos2[1].remote_id
 
         self.assertEqual(videos[4].remote_id, videos2[0].remote_id)
 
