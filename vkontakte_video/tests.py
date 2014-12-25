@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-from django.test import TestCase
-from django.utils import timezone
 import json
 
-import mock
-from vkontakte_groups.factories import GroupFactory
-
+from django.test import TestCase
+from django.utils import timezone
 from factories import AlbumFactory, VideoFactory
-from models import Album, Video, Comment
+import mock
+from models import Album, Video
+from vkontakte_comments.models import Comment
+from vkontakte_groups.factories import GroupFactory
 from vkontakte_users.factories import UserFactory, User
-#from datetime import datetime
-#import mock
+
+
 GROUP_ID = 16297716  # https://vk.com/cocacola
 ALBUM_ID = 50850761  # 9 videos
 VIDEO_ID = 166742757  # 12 comments
@@ -69,7 +69,7 @@ class AlbumTest(TestCase):
 
         self.assertEqual(instance.pk, d['id'])
         self.assertEqual(instance.title, d['title'])
-        self.assertEqual(instance.videos_count, d['count'])
+        self.assertEqual(instance.videos_count, 16)
         self.assertEqual(instance.photo_160, d['photo_160'])
 
 
@@ -118,11 +118,9 @@ class VideoTest(TestCase):
         self.assertEqual(len(videos), Video.objects.count())
         self.assertEqual(len(videos), 3)
 
-        date = videos[0].date
-        self.assertGreaterEqual(date, after)
+        self.assertGreaterEqual(videos[0].date, after)
 
-        date = videos.last().date
-        self.assertLessEqual(date, before)
+        self.assertLessEqual(videos.order_by('-date')[0].date, before)
 
     def test_fetch_with_count_and_offset(self):
         # testing `count` parameter, count is the same as limit
@@ -270,7 +268,7 @@ class CommentTest(TestCase):
 
         owner = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, owner=owner)
-        video = VideoFactory(remote_id=VIDEO_ID, album=album, owner=owner)
+        video = VideoFactory(remote_id=VIDEO_ID, album=album, owner=owner, likes_count=0)
 
         self.assertEqual(video.likes_count, 0)
         users_initial = User.objects.count()
@@ -280,7 +278,7 @@ class CommentTest(TestCase):
         self.assertTrue(video.likes_count > 0)
         self.assertEqual(video.likes_count, len(users))
         self.assertEqual(video.likes_count, User.objects.count() - users_initial)
-        self.assertEqual(video.likes_count, video.like_users.count())
+        self.assertEqual(video.likes_count, video.likes_users.count())
 
 
 class OtherTests(TestCase):
@@ -319,20 +317,20 @@ class OtherTests(TestCase):
         self.assertEqual(Video.objects.count(), len(videos))
         self.assertEqual(videos[0].owner, user)
 
-    def test_link(self):
+    def test_get_url(self):
         owner = GroupFactory(remote_id=GROUP_ID)
         album = AlbumFactory(remote_id=ALBUM_ID, owner=owner)
         video = VideoFactory(remote_id=VIDEO_ID, album=album, owner=owner)
 
-        self.assertEqual(album.link.count("-"), 1)
-        self.assertEqual(video.link.count("-"), 1)
+        self.assertEqual(album.get_url().count("-"), 1)
+        self.assertEqual(video.get_url().count("-"), 1)
 
         user = UserFactory(remote_id=13312307)
         album = AlbumFactory(remote_id=55976289, owner=user)
         video = VideoFactory(remote_id=165144348, album=album, owner=user)
 
-        self.assertEqual(album.link.count("-"), 0)
-        self.assertEqual(video.link.count("-"), 0)
+        self.assertEqual(album.get_url().count("-"), 0)
+        self.assertEqual(video.get_url().count("-"), 0)
 
 
 class OldTests():
