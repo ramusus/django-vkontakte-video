@@ -26,7 +26,7 @@ class VideoFactory(factory.DjangoModelFactory):
     likes_count = factory.LazyAttribute(lambda o: random.randint(0, 1000))
     comments_count = factory.LazyAttribute(lambda o: random.randint(0, 1000))
 
-    date = timezone.now()
+    date = factory.LazyAttribute(lambda o: timezone.now())
 
     class Meta:
         model = Video
