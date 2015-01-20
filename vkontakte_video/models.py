@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.encoding import python_2_unicode_compatible
+from vkontakte_api.decorators import fetch_all
 from vkontakte_api.mixins import CountOffsetManagerMixin, AfterBeforeManagerMixin, OwnerableModelMixin, LikableModelMixin
 from vkontakte_api.models import VkontaktePKModel
 from vkontakte_comments.mixins import CommentableModelMixin
@@ -35,6 +36,7 @@ class AlbumRemoteManager(CountOffsetManagerMixin):
 class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
     @transaction.commit_on_success
+    @fetch_all
     def fetch(self, album=None, owner=None, ids=None, extended=1, **kwargs):
         if not (album or owner):
             raise ValueError("You must specify or video album or owner, which video you want to fetch")
@@ -45,7 +47,7 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
         if album:
             kwargs['owner_id'] = album.owner_remote_id
             kwargs['album_id'] = album.remote_id
-            #kwargs['extra_fields'] = {'album_id': album.pk}
+            kwargs['extra_fields'] = {'album': album}
 
         if ids:
             videos = []
@@ -64,11 +66,9 @@ class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 @python_2_unicode_compatible
 class Album(OwnerableModelMixin, VkontaktePKModel):
 
-    photo_160 = models.URLField(max_length=255, default='')
-
+    photo_160 = models.URLField(max_length=255)
     videos_count = models.PositiveIntegerField(u'Кол-во видеозаписей')
-
-    title = models.CharField(max_length='200')
+    title = models.CharField(max_length=200)
 
     objects = models.Manager()
     remote = AlbumRemoteManager(remote_pk=('remote_id',), version=5.27, methods_namespace='video', methods={
@@ -93,7 +93,11 @@ class Album(OwnerableModelMixin, VkontaktePKModel):
 
     @transaction.commit_on_success
     def fetch_videos(self, *args, **kwargs):
-        return Video.remote.fetch(album=self, *args, **kwargs)
+        videos = Video.remote.fetch(album=self, *args, **kwargs)
+        if videos.count() > self.videos_count:
+            self.videos_count = videos.count()
+            self.save()
+        return videos
 
 
 @python_2_unicode_compatible
@@ -102,19 +106,13 @@ class Video(OwnerableModelMixin, LikableModelMixin, CommentableModelMixin, Vkont
     comments_remote_related_name = 'video_id'
     likes_remote_type = 'video'
 
-    album = models.ForeignKey(Album, null=True, related_name='videos')
-
+    album = models.ForeignKey(Album, related_name='videos')
     title = models.CharField(max_length=255)
     description = models.TextField()
-
     duration = models.PositiveIntegerField(u'Продолжительность')
-
     views_count = models.PositiveIntegerField(u'Кол-во просмотров', default=0)
-
-    link = models.URLField(max_length=255)
     photo_130 = models.URLField(max_length=255)
     player = models.URLField(max_length=255)
-
     date = models.DateTimeField(help_text=u'Дата создания', db_index=True)
 
     objects = models.Manager()

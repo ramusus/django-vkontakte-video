@@ -2,7 +2,8 @@
 from django.contrib import admin
 from django.core.urlresolvers import reverse
 from vkontakte_api.admin import VkontakteModelAdmin
-from models import Album, Video
+
+from .models import Album, Video
 
 
 class VideoInline(admin.TabularInline):
@@ -22,7 +23,7 @@ class VideoInline(admin.TabularInline):
 class AlbumAdmin(VkontakteModelAdmin):
 
     def image_preview(self, obj):
-        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.link, obj.photo_160)
+        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.photo_160, obj.photo_160)
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
 
@@ -35,13 +36,14 @@ class AlbumAdmin(VkontakteModelAdmin):
 class VideoAdmin(VkontakteModelAdmin):
 
     def image_preview(self, obj):
-        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.link, obj.photo_130)
+        return u'<a href="%s"><img src="%s" height="30" /></a>' % (obj.photo_130, obj.photo_130)
     image_preview.short_description = u'Картинка'
     image_preview.allow_tags = True
 
     list_display = ('image_preview', 'remote_id', 'owner', 'album', 'title', 'comments_count', 'views_count', 'date')
     list_display_links = ('remote_id', 'title')
     list_filter = ('album',)
+
 
 admin.site.register(Album, AlbumAdmin)
 admin.site.register(Video, VideoAdmin)

@@ -2,8 +2,7 @@ import random
 
 from django.utils import timezone
 import factory
-#from vkontakte_groups.factories import GroupFactory
-#from vkontakte_users.factories import UserFactory
+
 from . models import Album, Video
 
 
