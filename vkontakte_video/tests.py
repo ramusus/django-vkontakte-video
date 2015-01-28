@@ -31,7 +31,7 @@ class VkontakteVideosTest(TestCase):
 
         albums = Album.remote.fetch(owner=owner)
 
-        self.assertTrue(len(albums) > 0)
+        self.assertGreater(albums.count(), 0)
         self.assertEqual(Album.objects.count(), len(albums))
         self.assertEqual(albums[0].owner, owner)
 
@@ -86,8 +86,8 @@ class VkontakteVideosTest(TestCase):
         self.assertEqual(videos.count(), Video.objects.count())
         self.assertEqual(videos[0].owner, owner)
         self.assertEqual(videos[0].album, album)
-        self.assertTrue(videos[0].likes_count > 0)
-        self.assertTrue(videos[0].comments_count > 0)
+        self.assertGreater(videos[0].likes_count, 0)
+        self.assertGreater(videos[0].comments_count, 0)
 
         # testing `after` parameter
         after = Video.objects.order_by('-date')[4].date
@@ -172,7 +172,7 @@ class VkontakteVideosTest(TestCase):
         '''
         d = json.loads(response)
 
-        instance = Video()
+        instance = Video(album=album)
         instance.parse(dict(d))
         instance.save()
 
@@ -223,7 +223,7 @@ class VkontakteVideosTest(TestCase):
         self.assertEqual(comments.count(), Comment.objects.count())
         self.assertEqual(comments.count(), video.comments.count())
         self.assertEqual(comments.count(), video.comments_count)
-        self.assertTrue(video.comments.count() > 10)
+        self.assertGreater(video.comments.count(), 10)
 
     def test_fetch_with_count_and_offset(self):
         # testing `count` parameter, count is the same as limit
@@ -258,7 +258,7 @@ class VkontakteVideosTest(TestCase):
 
         users = video.fetch_likes(all=True)
 
-        self.assertTrue(video.likes_count > 0)
+        self.assertGreater(video.likes_count, 0)
         self.assertEqual(video.likes_count, len(users))
         self.assertEqual(video.likes_count, User.objects.count() - users_initial)
         self.assertEqual(video.likes_count, video.likes_users.count())
@@ -288,7 +288,7 @@ class VkontakteVideosTest(TestCase):
 
         # fetch user video likes
         users = video.fetch_likes(all=True)
-        self.assertTrue(video.likes_count > 0)
+        self.assertGreater(video.likes_count, 0)
         self.assertEqual(video.likes_count, len(users))
 
         # fetch all user videos

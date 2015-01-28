@@ -106,7 +106,7 @@ class Video(OwnerableModelMixin, LikableModelMixin, CommentableModelMixin, Vkont
     comments_remote_related_name = 'video_id'
     likes_remote_type = 'video'
 
-    album = models.ForeignKey(Album, related_name='videos')
+    album = models.ForeignKey(Album, null=True, related_name='videos')
     title = models.CharField(max_length=255)
     description = models.TextField()
     duration = models.PositiveIntegerField(u'Продолжительность')
