@@ -8,7 +8,8 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.encoding import python_2_unicode_compatible
 from vkontakte_api.decorators import fetch_all
-from vkontakte_api.mixins import CountOffsetManagerMixin, AfterBeforeManagerMixin, OwnerableModelMixin, LikableModelMixin
+from vkontakte_api.mixins import CountOffsetManagerMixin, AfterBeforeManagerMixin, \
+    OwnerableModelMixin, LikableModelMixin, ActionableModelMixin
 from vkontakte_api.models import VkontaktePKModel
 from vkontakte_comments.mixins import CommentableModelMixin
 
@@ -101,7 +102,7 @@ class Album(OwnerableModelMixin, VkontaktePKModel):
 
 
 @python_2_unicode_compatible
-class Video(OwnerableModelMixin, LikableModelMixin, CommentableModelMixin, VkontaktePKModel):
+class Video(OwnerableModelMixin, ActionableModelMixin, LikableModelMixin, CommentableModelMixin, VkontaktePKModel):
 
     comments_remote_related_name = 'video_id'
     likes_remote_type = 'video'
@@ -131,6 +132,11 @@ class Video(OwnerableModelMixin, LikableModelMixin, CommentableModelMixin, Vkont
     @property
     def slug(self):
         return 'video%s_%s' % (self.owner_remote_id, self.remote_id)
+
+    def _substitute(self, old_instance):
+        if old_instance.album_id:
+            self.album_id = old_instance.album_id
+        super(Video, self)._substitute(old_instance)
 
     def parse(self, response):
         response['views_count'] = response.pop('views')

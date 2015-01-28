@@ -18,7 +18,7 @@ VIDEO_ID = 166742757  # 12 comments
 GROUP_CRUD_ID = 59154616  # https://vk.com/club59154616 # django-vkontakte-wall crud operations
 ALBUM_CRUD_ID = 55964907
 VIDEO_CRUD_ID = 170947024
-#USER_AUTHOR_ID = 201164356
+USER_ID = 201164356
 
 
 class VkontakteVideosTest(TestCase):
@@ -32,7 +32,7 @@ class VkontakteVideosTest(TestCase):
         albums = Album.remote.fetch(owner=owner)
 
         self.assertGreater(albums.count(), 0)
-        self.assertEqual(Album.objects.count(), len(albums))
+        self.assertEqual(Album.objects.count(), albums.count())
         self.assertEqual(albums[0].owner, owner)
 
     def test_fetch_with_count_and_offset(self):
@@ -43,7 +43,7 @@ class VkontakteVideosTest(TestCase):
 
         albums = Album.remote.fetch(owner=owner, count=5)
 
-        self.assertEqual(len(albums), 5)
+        self.assertEqual(albums.count(), 5)
         self.assertEqual(Album.objects.count(), 5)
 
         # testing `offset` parameter
@@ -96,8 +96,8 @@ class VkontakteVideosTest(TestCase):
         self.assertEqual(Video.objects.count(), 0)
 
         videos = album.fetch_videos(after=after)
-        self.assertEqual(len(videos), Video.objects.count())
-        self.assertEqual(len(videos), 5)
+        self.assertEqual(videos.count(), Video.objects.count())
+        self.assertEqual(videos.count(), 5)
 
         date = videos[0].date
         self.assertGreaterEqual(date, after)
@@ -109,8 +109,8 @@ class VkontakteVideosTest(TestCase):
         self.assertEqual(Video.objects.count(), 0)
 
         videos = album.fetch_videos(before=before, after=after)
-        self.assertEqual(len(videos), Video.objects.count())
-        self.assertEqual(len(videos), 3)
+        self.assertEqual(videos.count(), Video.objects.count())
+        self.assertEqual(videos.count(), 3)
 
         self.assertGreaterEqual(videos[0].date, after)
 
@@ -125,7 +125,7 @@ class VkontakteVideosTest(TestCase):
 
         videos = album.fetch_videos(count=5)
 
-        self.assertEqual(len(videos), 5)
+        self.assertEqual(videos.count(), 5)
         self.assertEqual(Video.objects.count(), 5)
 
         # testing `offset` parameter
@@ -263,27 +263,28 @@ class VkontakteVideosTest(TestCase):
         self.assertEqual(video.likes_count, User.objects.count() - users_initial)
         self.assertEqual(video.likes_count, video.likes_users.count())
 
-    def test_fetch_by_user_parameter(self):
-        user = UserFactory(remote_id=13312307)
+    def test_fetch_user_videos(self):
+        user = UserFactory(remote_id=USER_ID)
 
         # fetch albums
         albums = Album.remote.fetch(owner=user)
-        self.assertGreater(len(albums), 0)
-        self.assertEqual(Album.objects.count(), len(albums))
+        self.assertGreater(albums.count(), 0)
+        self.assertEqual(albums.count(), Album.objects.count())
         self.assertEqual(albums[0].owner, user)
 
         # fetch album videos
         album = albums[0]
         videos = album.fetch_videos()
-        self.assertGreater(len(videos), 0)
-        self.assertEqual(Video.objects.count(), len(videos))
+        self.assertGreater(videos.count(), 0)
+        self.assertEqual(videos.count(), Video.objects.count())
+        self.assertEqual(videos.count(), album.videos_count)
         self.assertEqual(videos[0].owner, user)
 
         # fetch user video comments
         video = videos[0]
         comments = video.fetch_comments()
         self.assertGreater(comments.count(), 0)
-        self.assertEqual(Comment.objects.count(), comments.count())
+        self.assertEqual(comments.count(), Comment.objects.count())
         self.assertEqual(comments[0].author, user)
 
         # fetch user video likes
@@ -293,8 +294,10 @@ class VkontakteVideosTest(TestCase):
 
         # fetch all user videos
         videos = Video.remote.fetch(owner=user)
-        self.assertGreater(len(videos), 0)
-        self.assertEqual(Video.objects.count(), len(videos))
+        self.assertGreater(videos.count(), 0)
+        self.assertGreater(videos.count(), album.videos_count)
+        self.assertEqual(videos.filter(album=album).count(), album.videos_count)
+        self.assertEqual(videos.count(), Video.objects.count())
         self.assertEqual(videos[0].owner, user)
 
     def test_get_url(self):
