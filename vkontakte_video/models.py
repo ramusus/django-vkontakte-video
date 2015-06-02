@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
-import re
 
-from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
-from django.db import models, transaction
+from django.db import models
 from django.utils import timezone
 from django.utils.encoding import python_2_unicode_compatible
-from vkontakte_api.decorators import fetch_all
+from vkontakte_api.decorators import fetch_all, atomic
 from vkontakte_api.mixins import CountOffsetManagerMixin, AfterBeforeManagerMixin, \
     OwnerableModelMixin, LikableModelMixin, ActionableModelMixin
 from vkontakte_api.models import VkontaktePKModel
@@ -23,7 +21,7 @@ class AlbumRemoteManager(CountOffsetManagerMixin):
     def get_timeline_date(self, instance):
         return instance.updated or instance.created or timezone.now()
 
-    @transaction.commit_on_success
+    @atomic
     def fetch(self, owner=None, **kwargs):
         if not owner:
             raise ValueError("You must specify owner, which albums you want to fetch")
@@ -36,7 +34,7 @@ class AlbumRemoteManager(CountOffsetManagerMixin):
 
 class VideoRemoteManager(CountOffsetManagerMixin, AfterBeforeManagerMixin):
 
-    @transaction.commit_on_success
+    @atomic
     @fetch_all
     def fetch(self, album=None, owner=None, ids=None, extended=1, **kwargs):
         if not (album or owner):
@@ -92,7 +90,7 @@ class Album(OwnerableModelMixin, VkontaktePKModel):
         response['videos_count'] = response.pop('count')
         super(Album, self).parse(response)
 
-    @transaction.commit_on_success
+    @atomic
     def fetch_videos(self, *args, **kwargs):
         videos = Video.remote.fetch(album=self, *args, **kwargs)
         if videos.count() > self.videos_count:
